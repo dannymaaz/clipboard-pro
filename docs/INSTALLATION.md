@@ -2,8 +2,6 @@
 
 ## Descarga Rapida
 
-Reemplaza `OWNER/clipboard-pro` por el repositorio real cuando el proyecto este publicado.
-
 Los scripts de macOS y Linux usan `curl` y `node` para encontrar automaticamente el asset mas reciente. Si prefieres no usar scripts, usa GitHub CLI con `gh release download`.
 
 ### Windows 10 y Windows 11
@@ -11,13 +9,13 @@ Los scripts de macOS y Linux usan `curl` y `node` para encontrar automaticamente
 PowerShell:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts/download-windows.ps1 -Repository OWNER/clipboard-pro
+powershell -ExecutionPolicy Bypass -File scripts/download-windows.ps1 -Repository dannymaaz/clipboard-pro
 ```
 
 GitHub CLI:
 
 ```powershell
-gh release download --repo OWNER/clipboard-pro --pattern "*.msi"
+gh release download --repo dannymaaz/clipboard-pro --pattern "*.msi"
 ```
 
 Instalar:
@@ -31,14 +29,14 @@ msiexec /i .\Clipboard*Pro*.msi
 Terminal:
 
 ```bash
-sh scripts/download-macos.sh OWNER/clipboard-pro
+sh scripts/download-macos.sh dannymaaz/clipboard-pro
 open clipboard-pro-macos.dmg
 ```
 
 GitHub CLI:
 
 ```bash
-gh release download --repo OWNER/clipboard-pro --pattern "*.dmg"
+gh release download --repo dannymaaz/clipboard-pro --pattern "*.dmg"
 ```
 
 Instalar:
@@ -52,7 +50,7 @@ Instalar:
 AppImage:
 
 ```bash
-sh scripts/download-linux.sh OWNER/clipboard-pro appimage
+sh scripts/download-linux.sh dannymaaz/clipboard-pro appimage
 chmod +x clipboard-pro-linux.appimage
 ./clipboard-pro-linux.appimage
 ```
@@ -60,13 +58,13 @@ chmod +x clipboard-pro-linux.appimage
 GitHub CLI para AppImage:
 
 ```bash
-gh release download --repo OWNER/clipboard-pro --pattern "*.AppImage"
+gh release download --repo dannymaaz/clipboard-pro --pattern "*.AppImage"
 ```
 
 Debian/Ubuntu:
 
 ```bash
-sh scripts/download-linux.sh OWNER/clipboard-pro deb
+sh scripts/download-linux.sh dannymaaz/clipboard-pro deb
 sudo apt install ./clipboard-pro-linux.deb
 clipboard-pro
 ```
@@ -74,7 +72,7 @@ clipboard-pro
 GitHub CLI para `.deb`:
 
 ```bash
-gh release download --repo OWNER/clipboard-pro --pattern "*.deb"
+gh release download --repo dannymaaz/clipboard-pro --pattern "*.deb"
 ```
 
 ## Build Local por Plataforma

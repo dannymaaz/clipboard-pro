@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 set -eu
 
-REPOSITORY="${1:-OWNER/clipboard-pro}"
+REPOSITORY="${1:-dannymaaz/clipboard-pro}"
 FORMAT="${2:-appimage}"
 
 case "$FORMAT" in

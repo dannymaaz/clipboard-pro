@@ -12,13 +12,13 @@ Formato recomendado:
 Descargar con PowerShell:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts/download-windows.ps1 -Repository OWNER/clipboard-pro
+powershell -ExecutionPolicy Bypass -File scripts/download-windows.ps1 -Repository dannymaaz/clipboard-pro
 ```
 
 Descargar con GitHub CLI:
 
 ```powershell
-gh release download --repo OWNER/clipboard-pro --pattern "*.msi"
+gh release download --repo dannymaaz/clipboard-pro --pattern "*.msi"
 ```
 
 Instalar:
@@ -43,14 +43,14 @@ Formato recomendado:
 Descargar con Terminal:
 
 ```bash
-sh scripts/download-macos.sh OWNER/clipboard-pro
+sh scripts/download-macos.sh dannymaaz/clipboard-pro
 open clipboard-pro-macos.dmg
 ```
 
 Descargar con GitHub CLI:
 
 ```bash
-gh release download --repo OWNER/clipboard-pro --pattern "*.dmg"
+gh release download --repo dannymaaz/clipboard-pro --pattern "*.dmg"
 ```
 
 Instalar:
@@ -75,7 +75,7 @@ Formatos recomendados:
 Descargar AppImage:
 
 ```bash
-sh scripts/download-linux.sh OWNER/clipboard-pro appimage
+sh scripts/download-linux.sh dannymaaz/clipboard-pro appimage
 chmod +x clipboard-pro-linux.appimage
 ./clipboard-pro-linux.appimage
 ```
@@ -83,7 +83,7 @@ chmod +x clipboard-pro-linux.appimage
 Descargar `.deb`:
 
 ```bash
-sh scripts/download-linux.sh OWNER/clipboard-pro deb
+sh scripts/download-linux.sh dannymaaz/clipboard-pro deb
 sudo apt install ./clipboard-pro-linux.deb
 clipboard-pro
 ```
@@ -91,8 +91,8 @@ clipboard-pro
 Descargar con GitHub CLI:
 
 ```bash
-gh release download --repo OWNER/clipboard-pro --pattern "*.AppImage"
-gh release download --repo OWNER/clipboard-pro --pattern "*.deb"
+gh release download --repo dannymaaz/clipboard-pro --pattern "*.AppImage"
+gh release download --repo dannymaaz/clipboard-pro --pattern "*.deb"
 ```
 
 Usar:

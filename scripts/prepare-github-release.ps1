@@ -1,5 +1,5 @@
 param(
-  [string]$Repository = "OWNER/clipboard-pro",
+  [string]$Repository = "dannymaaz/clipboard-pro",
   [string]$Version = "v0.1.0"
 )
 

@@ -46,20 +46,20 @@ Descarga por sistema:
 Windows PowerShell:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts/download-windows.ps1 -Repository OWNER/clipboard-pro
+powershell -ExecutionPolicy Bypass -File scripts/download-windows.ps1 -Repository dannymaaz/clipboard-pro
 ```
 
 macOS:
 
 ```bash
-sh scripts/download-macos.sh OWNER/clipboard-pro
+sh scripts/download-macos.sh dannymaaz/clipboard-pro
 open clipboard-pro-macos.dmg
 ```
 
 Linux AppImage:
 
 ```bash
-sh scripts/download-linux.sh OWNER/clipboard-pro appimage
+sh scripts/download-linux.sh dannymaaz/clipboard-pro appimage
 chmod +x clipboard-pro-linux.appimage
 ./clipboard-pro-linux.appimage
 ```
@@ -67,7 +67,7 @@ chmod +x clipboard-pro-linux.appimage
 Linux Debian/Ubuntu:
 
 ```bash
-sh scripts/download-linux.sh OWNER/clipboard-pro deb
+sh scripts/download-linux.sh dannymaaz/clipboard-pro deb
 sudo apt install ./clipboard-pro-linux.deb
 ```
 

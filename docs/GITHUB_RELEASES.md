@@ -19,11 +19,11 @@ git init
 git add .
 git commit -m "Initial Clipboard Pro MVP"
 git branch -M main
-git remote add origin https://github.com/OWNER/clipboard-pro.git
+git remote add origin https://github.com/dannymaaz/clipboard-pro.git
 git push -u origin main
 ```
 
-Reemplaza `OWNER` por tu usuario u organizacion de GitHub.
+El repositorio publico del proyecto es `dannymaaz/clipboard-pro`.
 
 ## 3. Crear una version
 
@@ -43,20 +43,20 @@ GitHub ejecutara `.github/workflows/release.yml` y creara un release draft con a
 Windows:
 
 ```powershell
-gh release download --repo OWNER/clipboard-pro --pattern "*.msi"
+gh release download --repo dannymaaz/clipboard-pro --pattern "*.msi"
 ```
 
 macOS:
 
 ```bash
-gh release download --repo OWNER/clipboard-pro --pattern "*.dmg"
+gh release download --repo dannymaaz/clipboard-pro --pattern "*.dmg"
 ```
 
 Linux:
 
 ```bash
-gh release download --repo OWNER/clipboard-pro --pattern "*.AppImage"
-gh release download --repo OWNER/clipboard-pro --pattern "*.deb"
+gh release download --repo dannymaaz/clipboard-pro --pattern "*.AppImage"
+gh release download --repo dannymaaz/clipboard-pro --pattern "*.deb"
 ```
 
 ## 5. Publicar el release

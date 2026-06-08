@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 set -eu
 
-REPOSITORY="${1:-OWNER/clipboard-pro}"
+REPOSITORY="${1:-dannymaaz/clipboard-pro}"
 ASSET_PATTERN="${2:-.*Clipboard.*Pro.*\\.dmg$}"
 
 ASSET_URL="$(curl -fsSL "https://api.github.com/repos/${REPOSITORY}/releases/latest" \
