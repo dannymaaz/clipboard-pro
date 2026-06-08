@@ -2,6 +2,11 @@
 
 All notable changes to Clipboard Pro will be documented in this file.
 
+## [0.1.3] - 2026-06-08
+
+### Fixed
+
+- Fixed CI dependency resolution by pinning `ts-interface-checker` to a published npm version.
 ## [0.1.2] - 2026-06-08
 
 ### Changed
@@ -26,4 +31,5 @@ All notable changes to Clipboard Pro will be documented in this file.
 - Clipboard item, collection and settings models.
 - Commands for copy, search, pin, favorite, rename, edit, delete and collections.
 - Open source documentation and community files.
+
 
