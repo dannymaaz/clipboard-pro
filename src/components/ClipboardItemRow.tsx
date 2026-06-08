@@ -1,6 +1,5 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type DragEvent, type ReactNode } from "react";
 import { Copy, FolderPlus, MoreVertical, Pencil, Pin, PinOff, Star, StarOff, Trash2 } from "lucide-react";
-import { motion } from "framer-motion";
 import clsx from "clsx";
 import type { ClipboardItem, Collection } from "../types/clipboard";
 import { getItemSubtitle, getItemTitle, itemKindMeta } from "../utils/itemFormat";
@@ -9,6 +8,7 @@ interface ClipboardItemRowProps {
   item: ClipboardItem;
   collections: Collection[];
   onCopy: (id: string) => void;
+  onPaste: (id: string) => void;
   onTogglePin: (id: string) => void;
   onToggleFavorite: (id: string) => void;
   onAddToCollection: (itemId: string, collectionId: string) => void;
@@ -22,6 +22,7 @@ export function ClipboardItemRow({
   item,
   collections,
   onCopy,
+  onPaste,
   onTogglePin,
   onToggleFavorite,
   onAddToCollection,
@@ -49,17 +50,21 @@ export function ClipboardItemRow({
     setMenuOpen(false);
   };
 
+  const onDragStart = (event: DragEvent<HTMLElement>) => {
+    event.dataTransfer.setData("application/x-clipboard-pro-item", item.id);
+    event.dataTransfer.effectAllowed = "copyMove";
+  };
+
   return (
-    <motion.article
-      layout
-      initial={{ opacity: 0, y: 6 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="group flex min-h-16 items-center gap-3 border-b border-black/5 px-3 py-2 last:border-b-0 dark:border-white/8"
+    <article
+      draggable
+      onDragStart={onDragStart}
+      className="animate-soft-in group flex min-h-14 items-center gap-2 border-b border-black/5 px-2 py-1.5 last:border-b-0 dark:border-white/8"
     >
       <button
         type="button"
-        onClick={() => onCopy(item.id)}
-        className="flex min-w-0 flex-1 items-center gap-3 rounded-md px-2 py-2 text-left transition hover:bg-black/5 dark:hover:bg-white/8"
+        onClick={() => onPaste(item.id)}
+        className="flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 py-1.5 text-left transition hover:bg-black/5 dark:hover:bg-white/8"
       >
         <span
           className={clsx(
@@ -70,7 +75,7 @@ export function ClipboardItemRow({
           <meta.Icon size={16} aria-hidden />
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm font-medium text-slate-950 dark:text-white">{title}</span>
+          <span className="block truncate text-[13px] font-medium text-slate-950 dark:text-white">{title}</span>
           <span className="mt-0.5 flex items-center gap-2 truncate text-xs text-slate-500 dark:text-slate-400">
             <span>{meta.label}</span>
             <span className="truncate">{subtitle}</span>
@@ -84,7 +89,7 @@ export function ClipboardItemRow({
         </button>
 
         {isMenuOpen ? (
-          <div className="absolute right-0 top-9 z-30 w-56 overflow-hidden rounded-lg border border-black/10 bg-white py-1 text-sm shadow-panel dark:border-white/10 dark:bg-slate-950">
+          <div className="absolute right-0 top-8 z-30 w-48 overflow-hidden rounded-lg border border-black/10 bg-white py-1 text-sm shadow-panel dark:border-white/10 dark:bg-slate-950">
             <MenuButton icon={<Copy size={15} />} label="Copiar" onClick={() => runAction(() => onCopy(item.id))} />
             <MenuButton
               icon={item.isPinned ? <PinOff size={15} /> : <Pin size={15} />}
@@ -104,23 +109,25 @@ export function ClipboardItemRow({
             {collections.length ? (
               <div className="border-y border-black/10 py-1 dark:border-white/10">
                 <div className="px-3 py-1 text-[11px] font-semibold uppercase text-slate-400">Agregar a coleccion</div>
-                {collections.map((collection) => {
-                  const isIncluded = item.collections.includes(collection.id);
-                  return (
-                    <MenuButton
-                      key={collection.id}
-                      icon={<FolderPlus size={15} />}
-                      label={isIncluded ? `Quitar de ${collection.name}` : collection.name}
-                      onClick={() =>
-                        runAction(() =>
-                          isIncluded
-                            ? onRemoveFromCollection(item.id, collection.id)
-                            : onAddToCollection(item.id, collection.id)
-                        )
-                      }
-                    />
-                  );
-                })}
+                <div className="custom-scrollbar max-h-32 overflow-y-auto">
+                  {collections.map((collection) => {
+                    const isIncluded = item.collections.includes(collection.id);
+                    return (
+                      <MenuButton
+                        key={collection.id}
+                        icon={<FolderPlus size={15} />}
+                        label={isIncluded ? `Quitar de ${collection.name}` : collection.name}
+                        onClick={() =>
+                          runAction(() =>
+                            isIncluded
+                              ? onRemoveFromCollection(item.id, collection.id)
+                              : onAddToCollection(item.id, collection.id)
+                          )
+                        }
+                      />
+                    );
+                  })}
+                </div>
               </div>
             ) : null}
 
@@ -133,7 +140,7 @@ export function ClipboardItemRow({
           </div>
         ) : null}
       </div>
-    </motion.article>
+    </article>
   );
 }
 
@@ -150,7 +157,7 @@ function MenuButton({ icon, label, onClick, danger }: MenuButtonProps) {
       type="button"
       onClick={onClick}
       className={clsx(
-        "flex h-9 w-full items-center gap-2 px-3 text-left text-xs transition hover:bg-black/5 dark:hover:bg-white/8",
+        "flex h-8 w-full items-center gap-2 px-3 text-left text-xs transition hover:bg-black/5 dark:hover:bg-white/8",
         danger ? "text-red-600 dark:text-red-400" : "text-slate-700 dark:text-slate-200"
       )}
     >

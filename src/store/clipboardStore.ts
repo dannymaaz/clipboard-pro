@@ -15,6 +15,7 @@ interface ClipboardState {
   setView: (view: ClipboardView) => void;
   setCollection: (id: string | null) => void;
   copy: (id: string) => Promise<void>;
+  paste: (id: string) => Promise<void>;
   togglePin: (id: string) => Promise<void>;
   toggleFavorite: (id: string) => Promise<void>;
   rename: (id: string, title: string) => Promise<void>;
@@ -42,8 +43,9 @@ export const useClipboardStore = create<ClipboardState>((set, get) => ({
 
   load: async () => {
     set({ isLoading: true });
+    const query = get().query;
     const [items, collections, settings] = await Promise.all([
-      clipboardService.listItems(),
+      query.trim() ? clipboardService.searchItems(query) : clipboardService.listItems(),
       clipboardService.listCollections(),
       clipboardService.getSettings()
     ]);
@@ -58,11 +60,17 @@ export const useClipboardStore = create<ClipboardState>((set, get) => ({
     set({ items });
   },
 
-  setView: (activeView) => set({ activeView }),
+  setView: (activeView) => set({ activeView, selectedCollectionId: null }),
   setCollection: (selectedCollectionId) => set({ selectedCollectionId }),
 
   copy: async (id) => {
     await clipboardService.copyItem(id);
+    await get().load();
+  },
+
+  paste: async (id) => {
+    await clipboardService.pasteItem(id);
+    await get().load();
   },
 
   togglePin: async (id) => {
@@ -116,12 +124,14 @@ export const useClipboardStore = create<ClipboardState>((set, get) => ({
 
   addToCollection: async (itemId, collectionId) => {
     const item = await clipboardService.addToCollection(itemId, collectionId);
-    set({ items: upsertItem(get().items, item) });
+    const collections = await clipboardService.listCollections();
+    set({ items: upsertItem(get().items, item), collections });
   },
 
   removeFromCollection: async (itemId, collectionId) => {
     const item = await clipboardService.removeFromCollection(itemId, collectionId);
-    set({ items: upsertItem(get().items, item) });
+    const collections = await clipboardService.listCollections();
+    set({ items: upsertItem(get().items, item), collections });
   },
 
   updateHistoryLimit: async (historyLimit) => {

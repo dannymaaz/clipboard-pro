@@ -99,9 +99,10 @@ npm run tauri:build
 - Abre Clipboard Pro con `Ctrl + Alt + V`.
 - Copia texto desde cualquier aplicacion; Clipboard Pro lo agregara al historial local.
 - Busca con la barra superior.
-- Selecciona un elemento para copiarlo al portapapeles activo.
+- Selecciona un elemento para copiarlo, ocultar la ventana y pegarlo en la app activa.
 - Usa el menu de tres puntos para copiar, pinear, marcar favorito, agregar a coleccion, renombrar, editar o eliminar.
 - Crea colecciones para organizar prompts, URLs, trabajo, universidad, clientes o codigo.
+- La app queda en la bandeja del sistema y se inicia automaticamente con el equipo.
 
 ## Arquitectura
 
@@ -122,7 +123,6 @@ Mas detalles en [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 - TypeScript
 - TailwindCSS
 - Zustand
-- Framer Motion
 - Lucide React
 - Tauri v2
 - Rust
@@ -131,8 +131,8 @@ Mas detalles en [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 ## Roadmap
 
 - MVP: historial, busqueda, copiar, pinear, favoritos, colecciones, renombrar y editar texto.
-- Beta: captura real del portapapeles, imagenes, documentos, configuracion visual y tray.
-- Stable: builds firmados, auto-start opcional, accesibilidad completa y pruebas E2E.
+- Beta: captura mejorada de imagenes, documentos, configuracion visual y firmas.
+- Stable: builds firmados, accesibilidad completa y pruebas E2E.
 
 Consulta [docs/ROADMAP.md](docs/ROADMAP.md).
 

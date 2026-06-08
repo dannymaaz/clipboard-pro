@@ -113,17 +113,25 @@ Los artefactos quedan en `src-tauri/target/release/bundle/appimage` y `src-tauri
 - Abre Clipboard Pro con `Ctrl + Alt + V`.
 - Copia texto desde cualquier aplicacion; se agregara al historial local.
 - Busca desde la barra superior.
-- Selecciona un elemento para copiarlo al portapapeles activo.
+- Selecciona un elemento para copiarlo, ocultar la ventana y pegarlo en la app activa.
 - Usa el menu de tres puntos para pinear, marcar favorito, agregar a coleccion, renombrar, editar o eliminar.
 - Ajusta el limite del historial desde el icono de preferencias.
+- La app queda en la bandeja del sistema; desde ahi puedes mostrarla, ocultarla o cerrarla.
+- Clipboard Pro se habilita para iniciar automaticamente con el sistema.
+
+### Notas por sistema
+
+- Windows: el pegado automatico usa `Ctrl + V` despues de ocultar la ventana.
+- macOS: el pegado automatico usa `Cmd + V`; si macOS lo solicita, habilita permisos en `System Settings > Privacy & Security > Accessibility`.
+- Linux: en sesiones X11 el pegado automatico usa `Ctrl + V`; en Wayland puede depender de las politicas del compositor.
 
 ## Releases en GitHub
 
 Para publicar una version:
 
 ```bash
-git tag v0.1.3
-git push origin v0.1.3
+git tag v0.1.4
+git push origin v0.1.4
 ```
 
-GitHub Actions generara releases draft para Windows, macOS y Linux usando `.github/workflows/release.yml`.
+GitHub Actions generara una release publica para Windows, macOS y Linux usando `.github/workflows/release.yml`.

@@ -15,14 +15,14 @@ interface ViewTabsProps {
 
 export function ViewTabs({ activeView, onChange }: ViewTabsProps) {
   return (
-    <div className="grid grid-cols-3 gap-1 border-b border-black/10 p-2 dark:border-white/10">
+    <div className="grid grid-cols-3 gap-1 border-b border-black/10 p-1.5 dark:border-white/10">
       {tabs.map(({ id, label, Icon }) => (
         <button
           key={id}
           type="button"
           onClick={() => onChange(id)}
           className={clsx(
-            "flex h-9 items-center justify-center gap-2 rounded-md text-xs font-medium transition",
+            "flex h-8 items-center justify-center gap-1.5 rounded-md text-[12px] font-medium transition",
             activeView === id
               ? "bg-accent text-white"
               : "text-slate-600 hover:bg-black/5 dark:text-slate-300 dark:hover:bg-white/8"

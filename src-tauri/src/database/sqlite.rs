@@ -94,6 +94,10 @@ impl Database {
     }
 
     pub fn create_text_item(&self, content: &str) -> Result<ClipboardItem, String> {
+        self.create_typed_item(detect_kind(content).as_str(), content, &make_preview(content))
+    }
+
+    pub fn create_typed_item(&self, kind: &str, content: &str, preview: &str) -> Result<ClipboardItem, String> {
         let conn = self.conn.lock().map_err(|error| error.to_string())?;
         if let Some(existing_id) = conn
             .query_row(
@@ -114,12 +118,10 @@ impl Database {
 
         let id = Uuid::new_v4().to_string();
         let now = now();
-        let kind = detect_kind(content);
-        let preview = make_preview(content);
         conn.execute(
             "INSERT INTO clipboard_items(id, title, content, preview, kind, created_at, updated_at)
              VALUES (?1, NULL, ?2, ?3, ?4, ?5, ?5)",
-            params![id, content, preview, kind.as_str(), now],
+            params![id, content, preview, kind, now],
         )
         .map_err(|error| error.to_string())?;
         self.prune_history_locked(&conn)?;

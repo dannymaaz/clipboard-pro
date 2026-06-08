@@ -1,7 +1,10 @@
 use crate::domain::models::{AppSettings, ClipboardItem, Collection};
+use crate::infrastructure::clipboard_monitor::CLIPBOARD_CHANGED_EVENT;
 use crate::AppState;
 use arboard::Clipboard;
-use tauri::State;
+use enigo::{Direction, Enigo, Key, Keyboard, Settings};
+use std::{thread, time::Duration};
+use tauri::{AppHandle, Emitter, Manager, State};
 
 #[tauri::command]
 pub fn list_items(state: State<'_, AppState>) -> Result<Vec<ClipboardItem>, String> {
@@ -21,11 +24,53 @@ pub fn create_text_item(state: State<'_, AppState>, content: String) -> Result<C
 #[tauri::command]
 pub fn copy_item(state: State<'_, AppState>, id: String) -> Result<(), String> {
     let item = state.db.fetch_item(&id)?;
+    if matches!(item.kind, crate::domain::models::ClipboardKind::Image) {
+        return state.db.mark_used(&id);
+    }
     Clipboard::new()
         .map_err(|error| error.to_string())?
         .set_text(item.content)
         .map_err(|error| error.to_string())?;
     state.db.mark_used(&id)
+}
+
+#[tauri::command]
+pub fn paste_item(app: AppHandle, state: State<'_, AppState>, id: String) -> Result<(), String> {
+    copy_item(state, id)?;
+    app.emit(CLIPBOARD_CHANGED_EVENT, ())
+        .map_err(|error| error.to_string())?;
+
+    if let Some(window) = app.get_webview_window("main") {
+        window.hide().map_err(|error| error.to_string())?;
+    }
+
+    thread::spawn(|| {
+        thread::sleep(Duration::from_millis(120));
+        let _ = paste_hotkey();
+    });
+
+    Ok(())
+}
+
+#[tauri::command]
+pub fn hide_window(app: AppHandle) -> Result<(), String> {
+    if let Some(window) = app.get_webview_window("main") {
+        window.hide().map_err(|error| error.to_string())?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub fn minimize_window(app: AppHandle) -> Result<(), String> {
+    if let Some(window) = app.get_webview_window("main") {
+        window.minimize().map_err(|error| error.to_string())?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub fn quit_app(app: AppHandle) {
+    app.exit(0);
 }
 
 #[tauri::command]
@@ -99,4 +144,24 @@ pub fn get_settings(state: State<'_, AppState>) -> Result<AppSettings, String> {
 #[tauri::command]
 pub fn update_history_limit(state: State<'_, AppState>, history_limit: i64) -> Result<AppSettings, String> {
     state.db.update_history_limit(history_limit)
+}
+
+fn paste_hotkey() -> Result<(), String> {
+    let mut enigo = Enigo::new(&Settings::default()).map_err(|error| error.to_string())?;
+    let modifier = if cfg!(target_os = "macos") {
+        Key::Meta
+    } else {
+        Key::Control
+    };
+
+    enigo
+        .key(modifier, Direction::Press)
+        .map_err(|error| error.to_string())?;
+    enigo
+        .key(Key::Unicode('v'), Direction::Click)
+        .map_err(|error| error.to_string())?;
+    enigo
+        .key(modifier, Direction::Release)
+        .map_err(|error| error.to_string())?;
+    Ok(())
 }

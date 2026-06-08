@@ -7,14 +7,14 @@ interface SearchBarProps {
 
 export function SearchBar({ value, onChange }: SearchBarProps) {
   return (
-    <label className="flex h-12 items-center gap-3 border-b border-black/10 px-4 dark:border-white/10">
-      <Search size={18} className="text-slate-500 dark:text-slate-400" aria-hidden />
+    <label className="flex h-11 items-center gap-2 px-3">
+      <Search size={17} className="text-slate-500 dark:text-slate-400" aria-hidden />
       <input
         autoFocus
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder="Buscar"
-        className="min-w-0 flex-1 bg-transparent text-sm text-slate-950 outline-none placeholder:text-slate-500 dark:text-white dark:placeholder:text-slate-400"
+        className="min-w-0 flex-1 bg-transparent text-[13px] text-slate-950 outline-none placeholder:text-slate-500 dark:text-white dark:placeholder:text-slate-400"
       />
     </label>
   );

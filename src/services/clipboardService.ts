@@ -98,6 +98,10 @@ const mockService = {
     const item = mockItems.find((candidate) => candidate.id === id);
     if (item && navigator.clipboard) await navigator.clipboard.writeText(item.content);
   },
+  pasteItem: async (id: string) => {
+    const item = mockItems.find((candidate) => candidate.id === id);
+    if (item && navigator.clipboard) await navigator.clipboard.writeText(item.content);
+  },
   renameItem: async (id: string, title: string) => updateMockItem(id, { title }),
   editTextItem: async (id: string, content: string) => updateMockItem(id, { content, preview: content.slice(0, 140) }),
   deleteItem: async (id: string) => {
@@ -159,6 +163,7 @@ export const clipboardService = {
   searchItems: (query: string) => (isTauri ? invoke<ClipboardItem[]>("search_items", { query }) : mockService.searchItems(query)),
   createTextItem: (content: string) => (isTauri ? invoke<ClipboardItem>("create_text_item", { content }) : mockService.createTextItem(content)),
   copyItem: (id: string) => (isTauri ? invoke<void>("copy_item", { id }) : mockService.copyItem(id)),
+  pasteItem: (id: string) => (isTauri ? invoke<void>("paste_item", { id }) : mockService.pasteItem(id)),
   renameItem: (id: string, title: string) => (isTauri ? invoke<ClipboardItem>("rename_item", { id, title }) : mockService.renameItem(id, title)),
   editTextItem: (id: string, content: string) =>
     isTauri ? invoke<ClipboardItem>("edit_text_item", { id, content }) : mockService.editTextItem(id, content),
@@ -180,5 +185,8 @@ export const clipboardService = {
       : mockService.removeFromCollection(itemId, collectionId),
   getSettings: () => (isTauri ? invoke<AppSettings>("get_settings") : mockService.getSettings()),
   updateHistoryLimit: (historyLimit: AppSettings["historyLimit"]) =>
-    isTauri ? invoke<AppSettings>("update_history_limit", { historyLimit }) : mockService.updateHistoryLimit(historyLimit)
+    isTauri ? invoke<AppSettings>("update_history_limit", { historyLimit }) : mockService.updateHistoryLimit(historyLimit),
+  hideWindow: () => (isTauri ? invoke<void>("hide_window") : Promise.resolve()),
+  minimizeWindow: () => (isTauri ? invoke<void>("minimize_window") : Promise.resolve()),
+  quitApp: () => (isTauri ? invoke<void>("quit_app") : Promise.resolve())
 };

@@ -25,10 +25,9 @@ textarea {
 
 @layer components {
   .window-shell {
-    display: grid;
-    min-height: 100vh;
-    place-items: center;
-    padding: 16px;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
     background:
       radial-gradient(circle at top left, rgb(var(--accent-rgb) / 0.18), transparent 34%),
       linear-gradient(135deg, rgb(248 250 252 / 0.45), rgb(226 232 240 / 0.28));
@@ -40,10 +39,27 @@ textarea {
       linear-gradient(135deg, rgb(2 6 23 / 0.55), rgb(15 23 42 / 0.38));
   }
 
+  .app-panel {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    border: 1px solid rgb(255 255 255 / 0.35);
+    border-radius: 12px;
+    background: rgb(255 255 255 / 0.72);
+    box-shadow: 0 24px 70px rgb(15 23 42 / 0.2);
+    backdrop-filter: blur(24px);
+  }
+
+  .dark .app-panel {
+    border-color: rgb(255 255 255 / 0.12);
+    background: rgb(2 6 23 / 0.78);
+  }
+
   .icon-button {
     display: grid;
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
     place-items: center;
     border-radius: 6px;
     color: rgb(71 85 105);
@@ -68,6 +84,37 @@ textarea {
 
   .icon-button.danger:hover {
     color: rgb(220 38 38);
+  }
+
+  .title-button {
+    display: grid;
+    width: 24px;
+    height: 22px;
+    place-items: center;
+    border-radius: 5px;
+    color: rgb(100 116 139);
+    transition:
+      background-color 120ms ease,
+      color 120ms ease;
+  }
+
+  .title-button:hover {
+    background: rgb(15 23 42 / 0.07);
+    color: rgb(15 23 42);
+  }
+
+  .title-button.danger:hover {
+    background: rgb(239 68 68 / 0.12);
+    color: rgb(220 38 38);
+  }
+
+  .dark .title-button {
+    color: rgb(203 213 225);
+  }
+
+  .dark .title-button:hover {
+    background: rgb(255 255 255 / 0.1);
+    color: white;
   }
 
   .text-button,
@@ -107,6 +154,22 @@ textarea {
   .dark .chip {
     color: rgb(203 213 225);
     background: rgb(255 255 255 / 0.08);
+  }
+
+  .animate-soft-in {
+    animation: soft-in 120ms ease-out both;
+  }
+}
+
+@keyframes soft-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 

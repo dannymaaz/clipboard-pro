@@ -2,6 +2,19 @@
 
 All notable changes to Clipboard Pro will be documented in this file.
 
+## [0.1.4] - 2026-06-08
+
+### Added
+
+- Added system tray actions, startup launch and native paste-on-select behavior.
+- Added automatic UI refresh when clipboard changes are detected.
+- Added drag and drop from clipboard items into collections.
+
+### Changed
+
+- Compact popup window to avoid clipping and better match native clipboard UX.
+- Reworked collections as an in-window category browser for many collections.
+- Replaced runtime animation dependency with lightweight CSS animation.
 ## [0.1.3] - 2026-06-08
 
 ### Fixed
@@ -31,5 +44,6 @@ All notable changes to Clipboard Pro will be documented in this file.
 - Clipboard item, collection and settings models.
 - Commands for copy, search, pin, favorite, rename, edit, delete and collections.
 - Open source documentation and community files.
+
 
 

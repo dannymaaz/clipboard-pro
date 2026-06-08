@@ -19,8 +19,6 @@ jobs:
             args: ""
           - platform: macos-latest
             args: ""
-          - platform: macos-13
-            args: ""
           - platform: ubuntu-22.04
             args: ""
 
