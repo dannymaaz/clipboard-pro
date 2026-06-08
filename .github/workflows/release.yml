@@ -19,6 +19,8 @@ jobs:
             args: ""
           - platform: macos-latest
             args: ""
+          - platform: macos-13
+            args: ""
           - platform: ubuntu-22.04
             args: ""
 
@@ -54,6 +56,6 @@ jobs:
           tagName: ${{ github.ref_name }}
           releaseName: "Clipboard Pro ${{ github.ref_name }}"
           releaseBody: "Cross-platform Clipboard Pro release for Windows, macOS and Linux."
-          releaseDraft: true
+          releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}

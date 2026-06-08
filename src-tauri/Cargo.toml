@@ -1,6 +1,6 @@
 [package]
 name = "clipboard-pro"
-version = "0.1.1"
+version = "0.1.2"
 description = "Clipboard Pro desktop application"
 authors = ["Danny Maaz"]
 edition = "2021"

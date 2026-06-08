@@ -2,6 +2,12 @@
 
 All notable changes to Clipboard Pro will be documented in this file.
 
+## [0.1.2] - 2026-06-08
+
+### Changed
+
+- Added macOS Intel release build alongside Apple Silicon.
+- Publish release assets directly from GitHub Actions.
 ## [0.1.1] - 2026-06-08
 
 ### Fixed
@@ -20,3 +26,4 @@ All notable changes to Clipboard Pro will be documented in this file.
 - Clipboard item, collection and settings models.
 - Commands for copy, search, pin, favorite, rename, edit, delete and collections.
 - Open source documentation and community files.
+
