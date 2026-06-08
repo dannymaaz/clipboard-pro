@@ -201,18 +201,21 @@ impl Database {
                  ORDER BY c.updated_at DESC",
             )
             .map_err(|error| error.to_string())?;
-        stmt.query_map([], |row| {
-            Ok(Collection {
-                id: row.get(0)?,
-                name: row.get(1)?,
-                item_count: row.get(2)?,
-                created_at: row.get(3)?,
-                updated_at: row.get(4)?,
+        let collections = stmt
+            .query_map([], |row| {
+                Ok(Collection {
+                    id: row.get(0)?,
+                    name: row.get(1)?,
+                    item_count: row.get(2)?,
+                    created_at: row.get(3)?,
+                    updated_at: row.get(4)?,
+                })
             })
-        })
-        .map_err(|error| error.to_string())?
-        .collect::<Result<Vec<_>, _>>()
-        .map_err(|error| error.to_string())
+            .map_err(|error| error.to_string())?
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|error| error.to_string())?;
+
+        Ok(collections)
     }
 
     pub fn create_collection(&self, name: &str) -> Result<Collection, String> {

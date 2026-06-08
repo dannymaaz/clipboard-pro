@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Clipboard Pro",
-  "version": "0.1.0",
-  "identifier": "com.clipboardpro.app",
+  "version": "0.1.1",
+  "identifier": "com.dannymaaz.clipboardpro",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",

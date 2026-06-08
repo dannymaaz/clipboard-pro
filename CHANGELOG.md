@@ -2,6 +2,13 @@
 
 All notable changes to Clipboard Pro will be documented in this file.
 
+## [0.1.1] - 2026-06-08
+
+### Fixed
+
+- Fixed SQLite collection query lifetime issue found by release builds.
+- Updated Tauri bundle identifier for macOS compatibility.
+
 ## [0.1.0] - 2026-06-08
 
 ### Added
