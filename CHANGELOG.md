@@ -2,6 +2,12 @@
 
 All notable changes to Clipboard Pro will be documented in this file.
 
+## [0.1.8] - 2026-06-08
+
+### Fixed
+
+- Switched macOS Intel release automation to the current `macos-15-intel` GitHub-hosted runner label.
+
 ## [0.1.7] - 2026-06-08
 
 ### Changed

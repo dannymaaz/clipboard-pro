@@ -114,13 +114,13 @@ Usar:
 El workflow `.github/workflows/release.yml` compila:
 
 - Windows en `windows-latest`.
-- macOS Intel en `macos-13`.
+- macOS Intel en `macos-15-intel`.
 - macOS Apple Silicon en `macos-latest`.
 - Linux en `ubuntu-22.04`.
 
 Publicar:
 
 ```bash
-git tag v0.1.7
-git push origin v0.1.7
+git tag v0.1.8
+git push origin v0.1.8
 ```

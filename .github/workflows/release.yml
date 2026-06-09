@@ -17,7 +17,7 @@ jobs:
         include:
           - platform: windows-latest
             args: ""
-          - platform: macos-13
+          - platform: macos-15-intel
             args: ""
           - platform: macos-latest
             args: ""

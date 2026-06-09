@@ -28,8 +28,8 @@ El repositorio publico del proyecto es `dannymaaz/clipboard-pro`.
 ## 3. Crear una version
 
 ```bash
-git tag v0.1.7
-git push origin v0.1.7
+git tag v0.1.8
+git push origin v0.1.8
 ```
 
 GitHub ejecutara `.github/workflows/release.yml` y creara una release publica con artefactos para:
