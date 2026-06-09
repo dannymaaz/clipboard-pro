@@ -23,6 +23,11 @@ textarea {
   font: inherit;
 }
 
+input,
+textarea {
+  user-select: text;
+}
+
 @layer components {
   .window-shell {
     width: 100vw;
@@ -44,6 +49,7 @@ textarea {
     width: 100vw;
     height: 100vh;
     overflow: hidden;
+    user-select: none;
     border: 1px solid rgb(255 255 255 / 0.35);
     border-radius: 12px;
     background: rgb(255 255 255 / 0.72);

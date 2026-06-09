@@ -131,8 +131,8 @@ Los artefactos quedan en `src-tauri/target/release/bundle/appimage` y `src-tauri
 Para publicar una version:
 
 ```bash
-git tag v0.1.5
-git push origin v0.1.5
+git tag v0.1.6
+git push origin v0.1.6
 ```
 
 GitHub Actions generara una release publica para Windows, macOS y Linux usando `.github/workflows/release.yml`.

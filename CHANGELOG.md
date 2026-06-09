@@ -2,6 +2,21 @@
 
 All notable changes to Clipboard Pro will be documented in this file.
 
+## [0.1.6] - 2026-06-08
+
+### Added
+
+- Added official GitHub screenshots for history, item menu, preferences and collections.
+
+### Changed
+
+- Moved preferences into a dedicated in-window view that keeps search and navigation available.
+- Improved tab sizing and native text selection behavior for the compact popup.
+
+### Fixed
+
+- Fixed item action menus so they render opaque and receive clicks instead of passing clicks through to list items.
+
 ## [0.1.5] - 2026-06-08
 
 ### Added

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type DragEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type DragEvent, type MouseEvent, type ReactNode } from "react";
 import { Copy, FolderPlus, MoreVertical, Pencil, Pin, PinOff, Star, StarOff, Trash2 } from "lucide-react";
 import clsx from "clsx";
 import type { ClipboardItem, Collection } from "../types/clipboard";
@@ -38,7 +38,7 @@ export function ClipboardItemRow({
   const subtitle = getItemSubtitle(item);
 
   useEffect(() => {
-    const closeMenu = (event: MouseEvent) => {
+    const closeMenu = (event: globalThis.MouseEvent) => {
       if (!menuRef.current?.contains(event.target as Node)) setMenuOpen(false);
     };
     document.addEventListener("mousedown", closeMenu);
@@ -51,20 +51,32 @@ export function ClipboardItemRow({
   };
 
   const onDragStart = (event: DragEvent<HTMLElement>) => {
+    if (isMenuOpen) {
+      event.preventDefault();
+      return;
+    }
     event.dataTransfer.setData("application/x-clipboard-pro-item", item.id);
     event.dataTransfer.effectAllowed = "copyMove";
   };
 
+  const stopMenuEvent = (event: MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+  };
+
   return (
     <article
-      draggable
-      onDragStart={onDragStart}
-      className="animate-soft-in group flex min-h-14 items-center gap-2 border-b border-black/5 px-2 py-1.5 last:border-b-0 dark:border-white/8"
+      className={clsx(
+        "animate-soft-in group relative flex min-h-14 items-center gap-2 border-b border-black/5 px-2 py-1.5 last:border-b-0 dark:border-white/8",
+        isMenuOpen ? "z-[80]" : "z-0"
+      )}
     >
       <button
         type="button"
+        draggable={!isMenuOpen}
+        onDragStart={onDragStart}
         onClick={() => onPaste(item.id)}
-        className="flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 py-1.5 text-left transition hover:bg-black/5 dark:hover:bg-white/8"
+        className="relative z-10 flex min-w-0 flex-1 items-center gap-2 overflow-hidden rounded-md px-2 py-1.5 text-left transition hover:bg-black/5 dark:hover:bg-white/8"
       >
         <span
           className={clsx(
@@ -87,13 +99,31 @@ export function ClipboardItemRow({
         </span>
       </button>
 
-      <div className="relative shrink-0" ref={menuRef}>
-        <button className="icon-button" type="button" title="Opciones" onClick={() => setMenuOpen((value) => !value)}>
+      <div className="relative z-20 shrink-0" ref={menuRef} onMouseDown={(event) => event.stopPropagation()}>
+        <button
+          className="icon-button"
+          type="button"
+          title="Opciones"
+          onMouseDown={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            setMenuOpen((value) => !value);
+          }}
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+          }}
+        >
           <MoreVertical size={16} aria-hidden />
         </button>
 
         {isMenuOpen ? (
-          <div className="absolute right-0 top-8 z-30 w-48 overflow-hidden rounded-lg border border-black/10 bg-white py-1 text-sm shadow-panel dark:border-white/10 dark:bg-slate-950">
+          <div
+            className="absolute right-0 top-8 z-[90] w-52 overflow-hidden rounded-lg border border-slate-200 bg-white py-1 text-sm shadow-2xl ring-1 ring-black/5 dark:border-slate-700 dark:bg-[#020617] dark:ring-white/10"
+            draggable={false}
+            onMouseDown={stopMenuEvent}
+            onClick={(event) => event.stopPropagation()}
+          >
             <MenuButton icon={<Copy size={15} />} label="Copiar" onClick={() => runAction(() => onCopy(item.id))} />
             <MenuButton
               icon={item.isPinned ? <PinOff size={15} /> : <Pin size={15} />}
@@ -159,9 +189,17 @@ function MenuButton({ icon, label, onClick, danger }: MenuButtonProps) {
   return (
     <button
       type="button"
-      onClick={onClick}
+      onMouseDown={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        onClick();
+      }}
+      onClick={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+      }}
       className={clsx(
-        "flex h-8 w-full items-center gap-2 px-3 text-left text-xs transition hover:bg-black/5 dark:hover:bg-white/8",
+        "relative z-[91] flex h-8 w-full items-center gap-2 px-3 text-left text-xs transition hover:bg-slate-100 dark:hover:bg-slate-800",
         danger ? "text-red-600 dark:text-red-400" : "text-slate-700 dark:text-slate-200"
       )}
     >

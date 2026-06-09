@@ -9,8 +9,8 @@
 </p>
 
 <p align="center">
-  Created by <strong>Danny Maaz</strong> ·
-  <a href="https://www.linkedin.com/in/DANNYMAAZ">LinkedIn</a> ·
+  Created by <strong>Danny Maaz</strong> &middot;
+  <a href="https://www.linkedin.com/in/DANNYMAAZ">LinkedIn</a> &middot;
   <a href="https://www.paypal.me/Creativegt">Support the project</a>
 </p>
 
@@ -39,7 +39,18 @@ Clipboard Pro es una aplicacion de escritorio moderna, minimalista, ultrarrapida
 
 ## Capturas
 
-Las capturas se agregaran en `docs/screenshots` cuando el MVP visual este integrado con builds firmados.
+<p align="center">
+  <img src="docs/screenshots/clipboard-pro-history.png" width="420" alt="Clipboard Pro history view" />
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/clipboard-pro-menu.png" width="420" alt="Clipboard Pro item actions menu" />
+  <img src="docs/screenshots/clipboard-pro-settings.png" width="420" alt="Clipboard Pro preferences view" />
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/clipboard-pro-collections.png" width="420" alt="Clipboard Pro collections view" />
+</p>
 
 ## Instalacion
 

@@ -22,14 +22,14 @@ export function ViewTabs({ activeView, onChange }: ViewTabsProps) {
           type="button"
           onClick={() => onChange(id)}
           className={clsx(
-            "flex h-8 items-center justify-center gap-1.5 rounded-md text-[12px] font-medium transition",
+            "flex h-8 min-w-0 items-center justify-center gap-1 rounded-md px-1 text-[12px] font-medium transition",
             activeView === id
               ? "bg-accent text-white"
               : "text-slate-600 hover:bg-black/5 dark:text-slate-300 dark:hover:bg-white/8"
           )}
         >
-          <Icon size={15} aria-hidden />
-          <span>{label}</span>
+          <Icon className="shrink-0" size={15} aria-hidden />
+          <span className="truncate">{label}</span>
         </button>
       ))}
     </div>

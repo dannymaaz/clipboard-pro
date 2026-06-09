@@ -49,6 +49,8 @@ export function ClipboardWindow() {
   };
 
   const visibleItems = useMemo(() => {
+    if (showSettings) return [];
+
     const base = store.items.filter((item) => {
       if (store.activeView === "favorites") return item.isFavorite;
       if (store.activeView === "collections" && store.selectedCollectionId) {
@@ -61,11 +63,11 @@ export function ClipboardWindow() {
       if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1;
       return Date.parse(b.createdAt) - Date.parse(a.createdAt);
     });
-  }, [store.activeView, store.items, store.selectedCollectionId]);
+  }, [showSettings, store.activeView, store.items, store.selectedCollectionId]);
 
   const selectedCollection = store.collections.find((collection) => collection.id === store.selectedCollectionId);
   const isCollectionRoot = store.activeView === "collections" && !store.selectedCollectionId;
-  const listHeight = showSettings ? 315 : store.activeView === "collections" ? 365 : 392;
+  const listHeight = store.activeView === "collections" ? 365 : 392;
 
   const dropItemIntoCollection = (event: DragEvent<HTMLElement>, collectionId: string) => {
     const itemId = event.dataTransfer.getData("application/x-clipboard-pro-item");
@@ -98,37 +100,64 @@ export function ClipboardWindow() {
           </button>
         </div>
 
-        <ViewTabs activeView={store.activeView} onChange={store.setView} />
+        <ViewTabs
+          activeView={store.activeView}
+          onChange={(view) => {
+            setShowSettings(false);
+            store.setView(view);
+          }}
+        />
 
         {showSettings ? (
-          <div className="border-b border-black/10 p-3 text-xs dark:border-white/10">
-            <label className="flex items-center justify-between gap-3 text-slate-600 dark:text-slate-300">
-              <span>Limite del historial</span>
-              <select
-                className="h-8 rounded-md border border-black/10 bg-white px-2 text-slate-900 outline-none dark:border-white/10 dark:bg-slate-900 dark:text-white"
-                value={store.settings?.historyLimit ?? 50}
-                onChange={(event) => void store.updateHistoryLimit(Number(event.target.value) as AppSettings["historyLimit"])}
-              >
-                <option value={50}>50</option>
-                <option value={100}>100</option>
-                <option value={250}>250</option>
-                <option value={500}>500</option>
-              </select>
-            </label>
-            <label className="mt-3 flex items-center justify-between gap-3 text-slate-600 dark:text-slate-300">
-              <span>Iniciar con el sistema</span>
-              <input
-                type="checkbox"
-                className="size-4 accent-blue-600"
-                checked={store.settings?.autoStart ?? false}
-                onChange={(event) => void store.updateAutoStart(event.target.checked)}
-              />
-            </label>
-            <div className="mt-2 text-slate-500 dark:text-slate-400">Atajo global: {store.settings?.shortcut ?? "Ctrl+Alt+V"}</div>
-          </div>
-        ) : null}
+          <section className="custom-scrollbar h-[365px] overflow-y-auto bg-white px-4 py-3 text-slate-900 dark:bg-[#020617] dark:text-white">
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h2 className="text-sm font-semibold">Preferencias</h2>
+                <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">Configuracion local de Clipboard Pro</p>
+              </div>
+              <button className="icon-button" title="Cerrar preferencias" type="button" onClick={() => setShowSettings(false)}>
+                <X size={16} aria-hidden />
+              </button>
+            </div>
 
-        {store.activeView === "collections" ? (
+            <div className="space-y-3">
+              <label className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs dark:border-slate-800 dark:bg-slate-900/70">
+                <span>
+                  <span className="block font-medium">Limite del historial</span>
+                  <span className="mt-0.5 block text-[11px] text-slate-500 dark:text-slate-400">Elimina automaticamente solo elementos no protegidos.</span>
+                </span>
+                <select
+                  className="h-8 rounded-md border border-slate-200 bg-white px-2 text-slate-900 outline-none dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                  value={store.settings?.historyLimit ?? 50}
+                  onChange={(event) => void store.updateHistoryLimit(Number(event.target.value) as AppSettings["historyLimit"])}
+                >
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                  <option value={250}>250</option>
+                  <option value={500}>500</option>
+                </select>
+              </label>
+
+              <label className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs dark:border-slate-800 dark:bg-slate-900/70">
+                <span>
+                  <span className="block font-medium">Iniciar con el sistema</span>
+                  <span className="mt-0.5 block text-[11px] text-slate-500 dark:text-slate-400">Mantiene el monitor activo desde el arranque.</span>
+                </span>
+                <input
+                  type="checkbox"
+                  className="size-4 accent-blue-600"
+                  checked={store.settings?.autoStart ?? false}
+                  onChange={(event) => void store.updateAutoStart(event.target.checked)}
+                />
+              </label>
+
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs dark:border-slate-800 dark:bg-slate-900/70">
+                <span className="block font-medium">Atajo global</span>
+                <span className="mt-1 block text-slate-500 dark:text-slate-400">{store.settings?.shortcut ?? "Ctrl+Alt+V"}</span>
+              </div>
+            </div>
+          </section>
+        ) : store.activeView === "collections" ? (
           <div className="flex items-center gap-2 border-b border-black/10 p-2 dark:border-white/10">
             {store.selectedCollectionId ? (
               <button className="icon-button" title="Volver a colecciones" type="button" onClick={() => store.setCollection(null)}>
@@ -149,7 +178,7 @@ export function ClipboardWindow() {
           </div>
         ) : null}
 
-        {isCollectionRoot ? (
+        {showSettings ? null : isCollectionRoot ? (
           <div className="custom-scrollbar h-[365px] overflow-y-auto p-2">
             {store.collections.length ? (
               <div className="grid gap-2">
