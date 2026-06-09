@@ -2,6 +2,14 @@
 
 All notable changes to Clipboard Pro will be documented in this file.
 
+## [0.1.7] - 2026-06-08
+
+### Changed
+
+- Added a dedicated macOS Intel release job alongside Apple Silicon builds.
+- Updated release automation to Node.js 24 for current GitHub Actions runners.
+- Refreshed platform documentation for Windows `.exe`/`.msi`, macOS and Linux downloads.
+
 ## [0.1.6] - 2026-06-08
 
 ### Added

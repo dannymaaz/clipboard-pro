@@ -7,7 +7,7 @@ Clipboard Pro esta preparado para un codigo unico con builds nativos en Windows,
 Formato recomendado:
 
 - `.msi` para instalacion tradicional.
-- `.exe` si se habilita NSIS en una fase posterior.
+- `.exe` para instalacion guiada con NSIS.
 
 Descargar con PowerShell:
 
@@ -19,6 +19,7 @@ Descargar con GitHub CLI:
 
 ```powershell
 gh release download --repo dannymaaz/clipboard-pro --pattern "*.msi"
+gh release download --repo dannymaaz/clipboard-pro --pattern "*.exe"
 ```
 
 Instalar:
@@ -113,12 +114,13 @@ Usar:
 El workflow `.github/workflows/release.yml` compila:
 
 - Windows en `windows-latest`.
-- macOS en `macos-latest`.
+- macOS Intel en `macos-13`.
+- macOS Apple Silicon en `macos-latest`.
 - Linux en `ubuntu-22.04`.
 
 Publicar:
 
 ```bash
-git tag v0.1.6
-git push origin v0.1.6
+git tag v0.1.7
+git push origin v0.1.7
 ```
