@@ -115,6 +115,15 @@ export function ClipboardWindow() {
                 <option value={500}>500</option>
               </select>
             </label>
+            <label className="mt-3 flex items-center justify-between gap-3 text-slate-600 dark:text-slate-300">
+              <span>Iniciar con el sistema</span>
+              <input
+                type="checkbox"
+                className="size-4 accent-blue-600"
+                checked={store.settings?.autoStart ?? false}
+                onChange={(event) => void store.updateAutoStart(event.target.checked)}
+              />
+            </label>
             <div className="mt-2 text-slate-500 dark:text-slate-400">Atajo global: {store.settings?.shortcut ?? "Ctrl+Alt+V"}</div>
           </div>
         ) : null}
@@ -187,7 +196,9 @@ export function ClipboardWindow() {
                 onAddToCollection={(itemId, collectionId) => void store.addToCollection(itemId, collectionId)}
                 onRemoveFromCollection={(itemId, collectionId) => void store.removeFromCollection(itemId, collectionId)}
                 onRename={(selectedItem) => setDialog({ mode: "rename", item: selectedItem })}
-                onEdit={(selectedItem) => setDialog({ mode: "edit", item: selectedItem })}
+                onEdit={(selectedItem) => {
+                  if (selectedItem.kind !== "image") setDialog({ mode: "edit", item: selectedItem });
+                }}
                 onDelete={(id) => void store.remove(id)}
               />
             )}

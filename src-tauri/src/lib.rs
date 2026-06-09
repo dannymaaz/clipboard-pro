@@ -12,9 +12,14 @@ use tauri::{
 };
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 use tauri_plugin_autostart::ManagerExt;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 pub struct AppState {
     pub db: Database,
+}
+
+pub struct LifecycleState {
+    pub is_quitting: AtomicBool,
 }
 
 const WINDOW_WIDTH: f64 = 380.0;
@@ -35,13 +40,21 @@ pub fn run() {
                 .build(),
         )
         .setup(|app| {
+            app.manage(LifecycleState {
+                is_quitting: AtomicBool::new(false),
+            });
             let shortcut = Shortcut::new(Some(Modifiers::CONTROL | Modifiers::ALT), Code::KeyV);
             app.global_shortcut().register(shortcut)?;
 
             let database = Database::new(app.handle())?;
             infrastructure::clipboard_monitor::spawn_clipboard_monitor(database.clone(), app.handle().clone());
+            let settings = database.get_settings()?;
+            if settings.auto_start {
+                let _ = app.autolaunch().enable();
+            } else {
+                let _ = app.autolaunch().disable();
+            }
             app.manage(AppState { db: database });
-            let _ = app.autolaunch().enable();
             build_tray(app.handle())?;
             Ok(())
         })
@@ -64,12 +77,21 @@ pub fn run() {
             commands::remove_from_collection,
             commands::get_settings,
             commands::update_history_limit,
+            commands::update_auto_start,
             commands::hide_window,
             commands::minimize_window,
             commands::quit_app
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running Clipboard Pro");
+        .build(tauri::generate_context!())
+        .expect("error while building Clipboard Pro")
+        .run(|app, event| {
+            if let tauri::RunEvent::ExitRequested { api, .. } = event {
+                let lifecycle = app.state::<LifecycleState>();
+                if !lifecycle.is_quitting.load(Ordering::SeqCst) {
+                    api.prevent_exit();
+                }
+            }
+        });
 }
 
 fn show_main_window(app: &AppHandle) -> tauri::Result<()> {

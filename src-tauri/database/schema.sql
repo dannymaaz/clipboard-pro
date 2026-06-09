@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS clipboard_items (
   title TEXT,
   content TEXT NOT NULL,
   preview TEXT NOT NULL,
+  thumbnail TEXT,
   kind TEXT NOT NULL CHECK (kind IN ('text', 'url', 'image', 'document')),
   is_pinned INTEGER NOT NULL DEFAULT 0,
   is_favorite INTEGER NOT NULL DEFAULT 0,
@@ -71,4 +72,5 @@ END;
 INSERT OR IGNORE INTO settings(key, value) VALUES
   ('history_limit', '50'),
   ('shortcut', 'Ctrl+Alt+V'),
-  ('theme', 'system');
+  ('theme', 'system'),
+  ('auto_start', 'false');

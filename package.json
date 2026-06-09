@@ -1,7 +1,7 @@
 {
   "name": "clipboard-pro",
   "private": true,
-  "version": "0.1.4",
+  "version": "0.1.5",
   "type": "module",
   "description": "Clipboard Pro is a fast, local-first, cross-platform clipboard upgrade built with Tauri, Rust, React and SQLite.",
   "author": {

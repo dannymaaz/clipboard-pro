@@ -33,6 +33,7 @@ Usar:
 - Copiar desde Word, Excel, VSCode, navegadores o cualquier app.
 - Seleccionar un elemento para pegarlo en la app activa y ocultar Clipboard Pro.
 - Usar el icono de bandeja para mostrar, ocultar o cerrar la app.
+- Activar o desactivar inicio automatico desde preferencias.
 
 ## macOS
 
@@ -65,6 +66,7 @@ Usar:
 - Abrir con `Ctrl + Alt + V`.
 - El historial se guarda localmente en el directorio de datos de la app.
 - Seleccionar un elemento usa `Cmd + V` automaticamente despues de ocultar la ventana.
+- Las imagenes copiadas se restauran al portapapeles como imagen al seleccionarlas.
 - Si macOS bloquea el pegado automatico, habilitar `Clipboard Pro` en `System Settings > Privacy & Security > Accessibility`.
 - En builds sin firma, revisar `System Settings > Privacy & Security`.
 
@@ -103,6 +105,7 @@ Usar:
 - Abrir con `Ctrl + Alt + V`.
 - En Wayland o escritorios con politicas estrictas, el shortcut global puede depender del compositor.
 - En X11, seleccionar un elemento usa `Ctrl + V` automaticamente; en Wayland puede requerir permisos del compositor.
+- Las imagenes copiadas se guardan localmente con miniatura y se restauran como imagen al seleccionarlas.
 - El historial se mantiene local y sin servicios externos.
 
 ## Generar Artefactos
@@ -116,6 +119,6 @@ El workflow `.github/workflows/release.yml` compila:
 Publicar:
 
 ```bash
-git tag v0.1.4
-git push origin v0.1.4
+git tag v0.1.5
+git push origin v0.1.5
 ```

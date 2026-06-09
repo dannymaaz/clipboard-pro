@@ -41,6 +41,7 @@ pub struct ClipboardItem {
     pub title: Option<String>,
     pub content: String,
     pub preview: String,
+    pub thumbnail: Option<String>,
     pub kind: ClipboardKind,
     pub is_pinned: bool,
     pub is_favorite: bool,
@@ -66,4 +67,13 @@ pub struct AppSettings {
     pub history_limit: i64,
     pub shortcut: String,
     pub theme: String,
+    pub auto_start: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ImageClipboardContent {
+    pub width: usize,
+    pub height: usize,
+    pub rgba_base64: String,
 }

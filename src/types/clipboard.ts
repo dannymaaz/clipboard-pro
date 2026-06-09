@@ -7,6 +7,7 @@ export interface ClipboardItem {
   title: string | null;
   content: string;
   preview: string;
+  thumbnail: string | null;
   kind: ClipboardKind;
   isPinned: boolean;
   isFavorite: boolean;
@@ -28,4 +29,5 @@ export interface AppSettings {
   historyLimit: 50 | 100 | 250 | 500;
   shortcut: string;
   theme: "system" | "light" | "dark";
+  autoStart: boolean;
 }

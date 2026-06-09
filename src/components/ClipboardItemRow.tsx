@@ -72,7 +72,11 @@ export function ClipboardItemRow({
             item.isPinned ? "bg-accent text-white" : "bg-black/5 text-slate-600 dark:bg-white/10 dark:text-slate-200"
           )}
         >
-          <meta.Icon size={16} aria-hidden />
+          {item.kind === "image" && item.thumbnail ? (
+            <img src={item.thumbnail} alt="" className="size-8 rounded-md object-cover" />
+          ) : (
+            <meta.Icon size={16} aria-hidden />
+          )}
         </span>
         <span className="min-w-0 flex-1">
           <span className="block truncate text-[13px] font-medium text-slate-950 dark:text-white">{title}</span>

@@ -31,8 +31,10 @@ Clipboard Pro es una aplicacion de escritorio moderna, minimalista, ultrarrapida
 - Colecciones con creacion, renombrado, eliminacion y relacion muchos-a-muchos.
 - Busqueda instantanea con SQLite FTS5 sobre historial, favoritos, pineados y colecciones.
 - Deteccion automatica de texto, URL, imagen y documento.
+- Imagenes con miniatura real y pegado de imagen desde el historial.
 - Renombrado visual y edicion segura solo para texto.
 - Atajo global predeterminado `Ctrl + Alt + V`.
+- Inicio automatico configurable desde preferencias.
 - Privacidad total: sin cloud, sin telemetria, sin analytics y sin servicios externos.
 
 ## Capturas
@@ -102,7 +104,7 @@ npm run tauri:build
 - Selecciona un elemento para copiarlo, ocultar la ventana y pegarlo en la app activa.
 - Usa el menu de tres puntos para copiar, pinear, marcar favorito, agregar a coleccion, renombrar, editar o eliminar.
 - Crea colecciones para organizar prompts, URLs, trabajo, universidad, clientes o codigo.
-- La app queda en la bandeja del sistema y se inicia automaticamente con el equipo.
+- La app queda en la bandeja del sistema; el inicio automatico se puede activar o desactivar en preferencias.
 
 ## Arquitectura
 
@@ -131,7 +133,7 @@ Mas detalles en [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 ## Roadmap
 
 - MVP: historial, busqueda, copiar, pinear, favoritos, colecciones, renombrar y editar texto.
-- Beta: captura mejorada de imagenes, documentos, configuracion visual y firmas.
+- Beta: documentos, configuracion visual avanzada y firmas.
 - Stable: builds firmados, accesibilidad completa y pruebas E2E.
 
 Consulta [docs/ROADMAP.md](docs/ROADMAP.md).

@@ -27,6 +27,7 @@ interface ClipboardState {
   addToCollection: (itemId: string, collectionId: string) => Promise<void>;
   removeFromCollection: (itemId: string, collectionId: string) => Promise<void>;
   updateHistoryLimit: (historyLimit: AppSettings["historyLimit"]) => Promise<void>;
+  updateAutoStart: (autoStart: boolean) => Promise<void>;
 }
 
 const upsertItem = (items: ClipboardItem[], nextItem: ClipboardItem) =>
@@ -138,5 +139,10 @@ export const useClipboardStore = create<ClipboardState>((set, get) => ({
     const settings = await clipboardService.updateHistoryLimit(historyLimit);
     const items = await clipboardService.listItems();
     set({ settings, items });
+  },
+
+  updateAutoStart: async (autoStart) => {
+    const settings = await clipboardService.updateAutoStart(autoStart);
+    set({ settings });
   }
 }));

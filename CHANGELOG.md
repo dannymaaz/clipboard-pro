@@ -2,6 +2,19 @@
 
 All notable changes to Clipboard Pro will be documented in this file.
 
+## [0.1.5] - 2026-06-08
+
+### Added
+
+- Added persisted image clipboard entries with real thumbnails in the list.
+- Added image paste support when selecting copied image entries.
+- Added a settings toggle to enable or disable launch at system startup.
+
+### Changed
+
+- Removed the hidden startup webview so idle mode only keeps the native tray/background process alive.
+- Close the popup webview after selection to reduce memory usage while idle.
+- Configured Windows release builds as GUI apps so no console window opens.
 ## [0.1.4] - 2026-06-08
 
 ### Added
@@ -44,6 +57,7 @@ All notable changes to Clipboard Pro will be documented in this file.
 - Clipboard item, collection and settings models.
 - Commands for copy, search, pin, favorite, rename, edit, delete and collections.
 - Open source documentation and community files.
+
 
 
 

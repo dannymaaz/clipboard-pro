@@ -10,6 +10,7 @@ let mockItems: ClipboardItem[] = [
     title: "Prompt Maestro",
     content: "Actua como un experto y ayudame a estructurar esta idea con claridad.",
     preview: "Actua como un experto y ayudame a estructurar esta idea...",
+    thumbnail: null,
     kind: "text",
     isPinned: true,
     isFavorite: true,
@@ -23,6 +24,7 @@ let mockItems: ClipboardItem[] = [
     title: "Repositorio Backend",
     content: "https://github.com/user/backend",
     preview: "github.com/user/backend",
+    thumbnail: null,
     kind: "url",
     isPinned: false,
     isFavorite: false,
@@ -36,6 +38,7 @@ let mockItems: ClipboardItem[] = [
     title: "Firma Correo",
     content: "Saludos,\nDanny",
     preview: "Saludos, Danny",
+    thumbnail: null,
     kind: "text",
     isPinned: true,
     isFavorite: false,
@@ -66,7 +69,8 @@ let mockCollections: Collection[] = [
 const mockSettings: AppSettings = {
   historyLimit: 50,
   shortcut: "Ctrl+Alt+V",
-  theme: "system"
+  theme: "system",
+  autoStart: false
 };
 
 const mockService = {
@@ -83,6 +87,7 @@ const mockService = {
       title: null,
       content,
       preview: content.slice(0, 140),
+      thumbnail: null,
       kind: content.startsWith("http") ? "url" : "text",
       isPinned: false,
       isFavorite: false,
@@ -146,7 +151,8 @@ const mockService = {
     return updateMockItem(itemId, { collections: item?.collections.filter((id) => id !== collectionId) ?? [] });
   },
   getSettings: async () => mockSettings,
-  updateHistoryLimit: async (historyLimit: AppSettings["historyLimit"]) => ({ ...mockSettings, historyLimit })
+  updateHistoryLimit: async (historyLimit: AppSettings["historyLimit"]) => ({ ...mockSettings, historyLimit }),
+  updateAutoStart: async (autoStart: boolean) => ({ ...mockSettings, autoStart })
 };
 
 function updateMockItem(id: string, patch: Partial<ClipboardItem>) {
@@ -186,6 +192,8 @@ export const clipboardService = {
   getSettings: () => (isTauri ? invoke<AppSettings>("get_settings") : mockService.getSettings()),
   updateHistoryLimit: (historyLimit: AppSettings["historyLimit"]) =>
     isTauri ? invoke<AppSettings>("update_history_limit", { historyLimit }) : mockService.updateHistoryLimit(historyLimit),
+  updateAutoStart: (autoStart: boolean) =>
+    isTauri ? invoke<AppSettings>("update_auto_start", { autoStart }) : mockService.updateAutoStart(autoStart),
   hideWindow: () => (isTauri ? invoke<void>("hide_window") : Promise.resolve()),
   minimizeWindow: () => (isTauri ? invoke<void>("minimize_window") : Promise.resolve()),
   quitApp: () => (isTauri ? invoke<void>("quit_app") : Promise.resolve())

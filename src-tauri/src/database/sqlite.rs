@@ -16,6 +16,7 @@ struct RawItem {
     title: Option<String>,
     content: String,
     preview: String,
+    thumbnail: Option<String>,
     kind: ClipboardKind,
     is_pinned: bool,
     is_favorite: bool,
@@ -32,6 +33,7 @@ impl Database {
         let conn = Connection::open(db_path).map_err(|error| error.to_string())?;
         conn.execute_batch(include_str!("../../database/schema.sql"))
             .map_err(|error| error.to_string())?;
+        migrate(&conn)?;
         Ok(Self {
             conn: Arc::new(Mutex::new(conn)),
         })
@@ -41,7 +43,7 @@ impl Database {
         let conn = self.conn.lock().map_err(|error| error.to_string())?;
         let mut stmt = conn
             .prepare(
-                "SELECT id, title, content, preview, kind, is_pinned, is_favorite, created_at, updated_at, last_used_at
+                "SELECT id, title, content, preview, thumbnail, kind, is_pinned, is_favorite, created_at, updated_at, last_used_at
                  FROM clipboard_items
                  ORDER BY is_pinned DESC, created_at DESC",
             )
@@ -54,7 +56,7 @@ impl Database {
 
         raw_items
             .into_iter()
-            .map(|raw| self.hydrate_item(&conn, raw))
+            .map(|raw| self.hydrate_item(&conn, raw, false))
             .collect()
     }
 
@@ -72,7 +74,7 @@ impl Database {
         let conn = self.conn.lock().map_err(|error| error.to_string())?;
         let mut stmt = conn
             .prepare(
-                "SELECT ci.id, ci.title, ci.content, ci.preview, ci.kind, ci.is_pinned, ci.is_favorite,
+                "SELECT ci.id, ci.title, ci.content, ci.preview, ci.thumbnail, ci.kind, ci.is_pinned, ci.is_favorite,
                         ci.created_at, ci.updated_at, ci.last_used_at
                  FROM item_search s
                  JOIN clipboard_items ci ON ci.id = s.item_id
@@ -89,15 +91,21 @@ impl Database {
 
         raw_items
             .into_iter()
-            .map(|raw| self.hydrate_item(&conn, raw))
+            .map(|raw| self.hydrate_item(&conn, raw, false))
             .collect()
     }
 
     pub fn create_text_item(&self, content: &str) -> Result<ClipboardItem, String> {
-        self.create_typed_item(detect_kind(content).as_str(), content, &make_preview(content))
+        self.create_typed_item(detect_kind(content).as_str(), content, &make_preview(content), None)
     }
 
-    pub fn create_typed_item(&self, kind: &str, content: &str, preview: &str) -> Result<ClipboardItem, String> {
+    pub fn create_typed_item(
+        &self,
+        kind: &str,
+        content: &str,
+        preview: &str,
+        thumbnail: Option<&str>,
+    ) -> Result<ClipboardItem, String> {
         let conn = self.conn.lock().map_err(|error| error.to_string())?;
         if let Some(existing_id) = conn
             .query_row(
@@ -119,9 +127,9 @@ impl Database {
         let id = Uuid::new_v4().to_string();
         let now = now();
         conn.execute(
-            "INSERT INTO clipboard_items(id, title, content, preview, kind, created_at, updated_at)
-             VALUES (?1, NULL, ?2, ?3, ?4, ?5, ?5)",
-            params![id, content, preview, kind, now],
+            "INSERT INTO clipboard_items(id, title, content, preview, thumbnail, kind, created_at, updated_at)
+             VALUES (?1, NULL, ?2, ?3, ?4, ?5, ?6, ?6)",
+            params![id, content, preview, thumbnail, kind, now],
         )
         .map_err(|error| error.to_string())?;
         self.prune_history_locked(&conn)?;
@@ -276,6 +284,7 @@ impl Database {
             history_limit: self.get_setting_i64_locked(&conn, "history_limit", 50)?,
             shortcut: self.get_setting_locked(&conn, "shortcut", "Ctrl+Alt+V")?,
             theme: self.get_setting_locked(&conn, "theme", "system")?,
+            auto_start: self.get_setting_bool_locked(&conn, "auto_start", false)?,
         })
     }
 
@@ -295,10 +304,22 @@ impl Database {
         self.get_settings()
     }
 
+    pub fn update_auto_start(&self, auto_start: bool) -> Result<AppSettings, String> {
+        let conn = self.conn.lock().map_err(|error| error.to_string())?;
+        conn.execute(
+            "INSERT INTO settings(key, value) VALUES ('auto_start', ?1)
+             ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+            params![auto_start.to_string()],
+        )
+        .map_err(|error| error.to_string())?;
+        drop(conn);
+        self.get_settings()
+    }
+
     fn fetch_item_locked(&self, conn: &Connection, id: &str) -> Result<ClipboardItem, String> {
         let raw = conn
             .query_row(
-                "SELECT id, title, content, preview, kind, is_pinned, is_favorite, created_at, updated_at, last_used_at
+                "SELECT id, title, content, preview, thumbnail, kind, is_pinned, is_favorite, created_at, updated_at, last_used_at
                  FROM clipboard_items WHERE id = ?1",
                 params![id],
                 map_raw_item,
@@ -306,10 +327,10 @@ impl Database {
             .optional()
             .map_err(|error| error.to_string())?
             .ok_or_else(|| "Clipboard item not found".to_string())?;
-        self.hydrate_item(conn, raw)
+        self.hydrate_item(conn, raw, true)
     }
 
-    fn hydrate_item(&self, conn: &Connection, raw: RawItem) -> Result<ClipboardItem, String> {
+    fn hydrate_item(&self, conn: &Connection, raw: RawItem, include_content: bool) -> Result<ClipboardItem, String> {
         let mut stmt = conn
             .prepare(
                 "SELECT collection_id FROM collection_items WHERE item_id = ?1 ORDER BY created_at DESC",
@@ -321,11 +342,18 @@ impl Database {
             .collect::<Result<Vec<_>, _>>()
             .map_err(|error| error.to_string())?;
 
+        let content = if include_content || !matches!(raw.kind, ClipboardKind::Image) {
+            raw.content
+        } else {
+            String::new()
+        };
+
         Ok(ClipboardItem {
             id: raw.id,
             title: raw.title,
-            content: raw.content,
+            content,
             preview: raw.preview,
+            thumbnail: raw.thumbnail,
             kind: raw.kind,
             is_pinned: raw.is_pinned,
             is_favorite: raw.is_favorite,
@@ -389,22 +417,38 @@ impl Database {
         let value = self.get_setting_locked(conn, key, &fallback.to_string())?;
         Ok(value.parse::<i64>().unwrap_or(fallback))
     }
+
+    fn get_setting_bool_locked(&self, conn: &Connection, key: &str, fallback: bool) -> Result<bool, String> {
+        let value = self.get_setting_locked(conn, key, if fallback { "true" } else { "false" })?;
+        Ok(matches!(value.as_str(), "true" | "1" | "yes"))
+    }
 }
 
 fn map_raw_item(row: &rusqlite::Row<'_>) -> rusqlite::Result<RawItem> {
-    let kind: String = row.get(4)?;
+    let kind: String = row.get(5)?;
     Ok(RawItem {
         id: row.get(0)?,
         title: row.get(1)?,
         content: row.get(2)?,
         preview: row.get(3)?,
+        thumbnail: row.get(4)?,
         kind: ClipboardKind::try_from(kind.as_str()).unwrap_or(ClipboardKind::Text),
-        is_pinned: row.get::<_, i64>(5)? == 1,
-        is_favorite: row.get::<_, i64>(6)? == 1,
-        created_at: row.get(7)?,
-        updated_at: row.get(8)?,
-        last_used_at: row.get(9)?,
+        is_pinned: row.get::<_, i64>(6)? == 1,
+        is_favorite: row.get::<_, i64>(7)? == 1,
+        created_at: row.get(8)?,
+        updated_at: row.get(9)?,
+        last_used_at: row.get(10)?,
     })
+}
+
+fn migrate(conn: &Connection) -> Result<(), String> {
+    let _ = conn.execute("ALTER TABLE clipboard_items ADD COLUMN thumbnail TEXT", []);
+    conn.execute(
+        "INSERT OR IGNORE INTO settings(key, value) VALUES ('auto_start', 'false')",
+        [],
+    )
+    .map_err(|error| error.to_string())?;
+    Ok(())
 }
 
 fn now() -> String {

@@ -117,7 +117,8 @@ Los artefactos quedan en `src-tauri/target/release/bundle/appimage` y `src-tauri
 - Usa el menu de tres puntos para pinear, marcar favorito, agregar a coleccion, renombrar, editar o eliminar.
 - Ajusta el limite del historial desde el icono de preferencias.
 - La app queda en la bandeja del sistema; desde ahi puedes mostrarla, ocultarla o cerrarla.
-- Clipboard Pro se habilita para iniciar automaticamente con el sistema.
+- Activa o desactiva `Iniciar con el sistema` desde preferencias.
+- Las imagenes copiadas se muestran con miniatura real y se pegan como imagen al seleccionarlas.
 
 ### Notas por sistema
 
@@ -130,8 +131,8 @@ Los artefactos quedan en `src-tauri/target/release/bundle/appimage` y `src-tauri
 Para publicar una version:
 
 ```bash
-git tag v0.1.4
-git push origin v0.1.4
+git tag v0.1.5
+git push origin v0.1.5
 ```
 
 GitHub Actions generara una release publica para Windows, macOS y Linux usando `.github/workflows/release.yml`.
