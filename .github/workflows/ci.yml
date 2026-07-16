@@ -43,7 +43,28 @@ jobs:
       - name: Format Rust sources for validation
         run: cargo fmt --manifest-path src-tauri/Cargo.toml --all
 
-      - name: Run Rust checks
+      - name: Run Clippy
+        shell: bash
         run: |
-          cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --all-features -- -D warnings
-          cargo test --manifest-path src-tauri/Cargo.toml --all-features
+          set +e
+          cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --all-features --message-format=short -- -D warnings > clippy.log 2>&1
+          status=$?
+          if [ $status -ne 0 ]; then
+            echo "Clippy failed. Relevant output:"
+            tail -n 120 clippy.log
+            exit $status
+          fi
+          tail -n 20 clippy.log
+
+      - name: Run Rust tests
+        shell: bash
+        run: |
+          set +e
+          cargo test --manifest-path src-tauri/Cargo.toml --all-features --quiet > tests.log 2>&1
+          status=$?
+          if [ $status -ne 0 ]; then
+            echo "Rust tests failed. Relevant output:"
+            tail -n 120 tests.log
+            exit $status
+          fi
+          tail -n 20 tests.log
