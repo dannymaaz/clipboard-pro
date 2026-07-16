@@ -2,6 +2,27 @@
 
 All notable changes to Clipboard Pro will be documented in this file.
 
+## [0.1.9] - 2026-07-16
+
+### Added
+
+- Added signed in-app updates from GitHub Releases with background download progress.
+- Added a desktop notification and an in-app choice to install immediately or later.
+- Added automatic restart after an update is installed.
+- Added manual update checks and an option to disable automatic checks.
+- Added system, light and dark appearance preferences.
+- Added twelve accent color presets, a native color selector and hexadecimal color input.
+- Added pull request CI for frontend builds, Clippy and Rust tests.
+
+### Security
+
+- Enabled a restrictive Content Security Policy for the Tauri webview.
+- Added cryptographic updater signature verification and release updater manifests.
+
+### Compatibility
+
+- Preserved the existing SQLite history, favorites, pinned items, collections and clipboard behavior without a database migration.
+
 ## [0.1.8] - 2026-06-08
 
 ### Fixed
@@ -86,7 +107,5 @@ All notable changes to Clipboard Pro will be documented in this file.
 - Clipboard item, collection and settings models.
 - Commands for copy, search, pin, favorite, rename, edit, delete and collections.
 - Open source documentation and community files.
-
-
 
 
