@@ -16,13 +16,13 @@ jobs:
       matrix:
         include:
           - platform: windows-latest
-            args: ""
+            args: "--config src-tauri/tauri.release.conf.json"
           - platform: macos-15-intel
-            args: ""
+            args: "--config src-tauri/tauri.release.conf.json"
           - platform: macos-latest
-            args: ""
+            args: "--config src-tauri/tauri.release.conf.json"
           - platform: ubuntu-22.04
-            args: ""
+            args: "--config src-tauri/tauri.release.conf.json"
 
     runs-on: ${{ matrix.platform }}
 
@@ -34,7 +34,7 @@ jobs:
         if: matrix.platform == 'ubuntu-22.04'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf xdg-utils
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -48,14 +48,19 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
-      - name: Build Tauri app
-        uses: tauri-apps/tauri-action@v0
+      - name: Build and publish Tauri app
+        uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "Clipboard Pro ${{ github.ref_name }}"
           releaseBody: "Cross-platform Clipboard Pro release for Windows, macOS and Linux."
           releaseDraft: false
           prerelease: false
+          generateReleaseNotes: true
+          uploadUpdaterJson: true
+          updaterJsonPreferNsis: true
           args: ${{ matrix.args }}
