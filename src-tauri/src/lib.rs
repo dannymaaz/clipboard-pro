@@ -3,16 +3,16 @@ mod database;
 mod domain;
 mod infrastructure;
 
-use application::commands;
+use application::{commands, updater};
 use database::sqlite::Database;
+use std::sync::atomic::{AtomicBool, Ordering};
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     AppHandle, Manager, WebviewUrl, WebviewWindowBuilder,
 };
-use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 use tauri_plugin_autostart::ManagerExt;
-use std::sync::atomic::{AtomicBool, Ordering};
+use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 
 pub struct AppState {
     pub db: Database,
@@ -27,6 +27,8 @@ const WINDOW_HEIGHT: f64 = 540.0;
 
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_notification::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_autostart::Builder::new().build())
         .plugin(
             tauri_plugin_global_shortcut::Builder::new()
@@ -43,11 +45,16 @@ pub fn run() {
             app.manage(LifecycleState {
                 is_quitting: AtomicBool::new(false),
             });
+            app.manage(updater::UpdaterState::default());
+
             let shortcut = Shortcut::new(Some(Modifiers::CONTROL | Modifiers::ALT), Code::KeyV);
             app.global_shortcut().register(shortcut)?;
 
             let database = Database::new(app.handle())?;
-            infrastructure::clipboard_monitor::spawn_clipboard_monitor(database.clone(), app.handle().clone());
+            infrastructure::clipboard_monitor::spawn_clipboard_monitor(
+                database.clone(),
+                app.handle().clone(),
+            );
             let settings = database.get_settings()?;
             if settings.auto_start {
                 let _ = app.autolaunch().enable();
@@ -80,7 +87,10 @@ pub fn run() {
             commands::update_auto_start,
             commands::hide_window,
             commands::minimize_window,
-            commands::quit_app
+            commands::quit_app,
+            updater::get_update_status,
+            updater::check_and_download_update,
+            updater::install_downloaded_update
         ])
         .build(tauri::generate_context!())
         .expect("error while building Clipboard Pro")

@@ -5,12 +5,16 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { ClipboardItemRow } from "../components/ClipboardItemRow";
 import { InlineDialog } from "../components/InlineDialog";
 import { SearchBar } from "../components/SearchBar";
+import { SettingsPanel } from "../components/SettingsPanel";
+import { UpdatePrompt } from "../components/UpdatePrompt";
 import { ViewTabs } from "../components/ViewTabs";
 import { VirtualList } from "../components/VirtualList";
-import { clipboardService } from "../services/clipboardService";
+import { useAppearancePreferences } from "../hooks/useAppearancePreferences";
+import { useAppUpdater } from "../hooks/useAppUpdater";
 import { useSystemTheme } from "../hooks/useSystemTheme";
+import { clipboardService } from "../services/clipboardService";
 import { useClipboardStore } from "../store/clipboardStore";
-import type { AppSettings, ClipboardItem } from "../types/clipboard";
+import type { ClipboardItem } from "../types/clipboard";
 
 type DialogState =
   | { mode: "rename"; item: ClipboardItem }
@@ -23,8 +27,10 @@ export function ClipboardWindow() {
   const store = useClipboardStore();
   const [dialog, setDialog] = useState<DialogState>(null);
   const [showSettings, setShowSettings] = useState(false);
+  const appearance = useAppearancePreferences();
+  const updater = useAppUpdater(appearance.autoUpdate);
 
-  useSystemTheme(store.settings?.theme);
+  useSystemTheme(appearance.theme, appearance.accentColor);
 
   useEffect(() => {
     void store.load();
@@ -65,11 +71,17 @@ export function ClipboardWindow() {
     });
   }, [showSettings, store.activeView, store.items, store.selectedCollectionId]);
 
-  const selectedCollection = store.collections.find((collection) => collection.id === store.selectedCollectionId);
-  const isCollectionRoot = store.activeView === "collections" && !store.selectedCollectionId;
+  const selectedCollection = store.collections.find(
+    (collection) => collection.id === store.selectedCollectionId
+  );
+  const isCollectionRoot =
+    store.activeView === "collections" && !store.selectedCollectionId;
   const listHeight = store.activeView === "collections" ? 365 : 392;
 
-  const dropItemIntoCollection = (event: DragEvent<HTMLElement>, collectionId: string) => {
+  const dropItemIntoCollection = (
+    event: DragEvent<HTMLElement>,
+    collectionId: string
+  ) => {
     const itemId = event.dataTransfer.getData("application/x-clipboard-pro-item");
     if (!itemId) return;
     event.preventDefault();
@@ -79,13 +91,31 @@ export function ClipboardWindow() {
   return (
     <main className="window-shell">
       <section className="app-panel">
-        <div className="flex h-7 items-center justify-between border-b border-black/10 px-2 text-[11px] text-slate-500 dark:border-white/10 dark:text-slate-400" onMouseDown={startDragging}>
-          <span className="font-semibold tracking-wide text-slate-600 dark:text-slate-300">Clipboard Pro</span>
-          <div className="flex items-center gap-1" onMouseDown={(event) => event.stopPropagation()}>
-            <button className="title-button" title="Ocultar" type="button" onClick={() => void clipboardService.hideWindow()}>
+        <div
+          className="flex h-7 items-center justify-between border-b border-black/10 px-2 text-[11px] text-slate-500 dark:border-white/10 dark:text-slate-400"
+          onMouseDown={startDragging}
+        >
+          <span className="font-semibold tracking-wide text-slate-600 dark:text-slate-300">
+            Clipboard Pro
+          </span>
+          <div
+            className="flex items-center gap-1"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <button
+              className="title-button"
+              title="Ocultar"
+              type="button"
+              onClick={() => void clipboardService.hideWindow()}
+            >
               <Minus size={13} aria-hidden />
             </button>
-            <button className="title-button danger" title="Cerrar Clipboard Pro" type="button" onClick={() => void clipboardService.quitApp()}>
+            <button
+              className="title-button danger"
+              title="Cerrar Clipboard Pro"
+              type="button"
+              onClick={() => void clipboardService.quitApp()}
+            >
               <X size={13} aria-hidden />
             </button>
           </div>
@@ -93,10 +123,24 @@ export function ClipboardWindow() {
 
         <div className="flex items-center border-b border-black/10 dark:border-white/10">
           <div className="min-w-0 flex-1">
-            <SearchBar value={store.query} onChange={(value) => void store.search(value)} />
+            <SearchBar
+              value={store.query}
+              onChange={(value) => void store.search(value)}
+            />
           </div>
-          <button className="mr-2 icon-button" title="Preferencias" type="button" onClick={() => setShowSettings((value) => !value)}>
+          <button
+            className="relative mr-2 icon-button"
+            title="Preferencias"
+            type="button"
+            onClick={() => setShowSettings((value) => !value)}
+          >
             <Settings size={16} aria-hidden />
+            {updater.phase === "ready" ? (
+              <span
+                className="absolute right-0.5 top-0.5 size-2 rounded-full bg-accent ring-2 ring-white dark:ring-slate-950"
+                aria-label="Actualizacion lista"
+              />
+            ) : null}
           </button>
         </div>
 
@@ -109,58 +153,20 @@ export function ClipboardWindow() {
         />
 
         {showSettings ? (
-          <section className="custom-scrollbar h-[365px] overflow-y-auto bg-white px-4 py-3 text-slate-900 dark:bg-[#020617] dark:text-white">
-            <div className="mb-4 flex items-center justify-between">
-              <div>
-                <h2 className="text-sm font-semibold">Preferencias</h2>
-                <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">Configuracion local de Clipboard Pro</p>
-              </div>
-              <button className="icon-button" title="Cerrar preferencias" type="button" onClick={() => setShowSettings(false)}>
-                <X size={16} aria-hidden />
-              </button>
-            </div>
-
-            <div className="space-y-3">
-              <label className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs dark:border-slate-800 dark:bg-slate-900/70">
-                <span>
-                  <span className="block font-medium">Limite del historial</span>
-                  <span className="mt-0.5 block text-[11px] text-slate-500 dark:text-slate-400">Elimina automaticamente solo elementos no protegidos.</span>
-                </span>
-                <select
-                  className="h-8 rounded-md border border-slate-200 bg-white px-2 text-slate-900 outline-none dark:border-slate-700 dark:bg-slate-950 dark:text-white"
-                  value={store.settings?.historyLimit ?? 50}
-                  onChange={(event) => void store.updateHistoryLimit(Number(event.target.value) as AppSettings["historyLimit"])}
-                >
-                  <option value={50}>50</option>
-                  <option value={100}>100</option>
-                  <option value={250}>250</option>
-                  <option value={500}>500</option>
-                </select>
-              </label>
-
-              <label className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs dark:border-slate-800 dark:bg-slate-900/70">
-                <span>
-                  <span className="block font-medium">Iniciar con el sistema</span>
-                  <span className="mt-0.5 block text-[11px] text-slate-500 dark:text-slate-400">Mantiene el monitor activo desde el arranque.</span>
-                </span>
-                <input
-                  type="checkbox"
-                  className="size-4 accent-blue-600"
-                  checked={store.settings?.autoStart ?? false}
-                  onChange={(event) => void store.updateAutoStart(event.target.checked)}
-                />
-              </label>
-
-              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs dark:border-slate-800 dark:bg-slate-900/70">
-                <span className="block font-medium">Atajo global</span>
-                <span className="mt-1 block text-slate-500 dark:text-slate-400">{store.settings?.shortcut ?? "Ctrl+Alt+V"}</span>
-              </div>
-            </div>
-          </section>
+          <SettingsPanel
+            updater={updater}
+            appearance={appearance}
+            onClose={() => setShowSettings(false)}
+          />
         ) : store.activeView === "collections" ? (
           <div className="flex items-center gap-2 border-b border-black/10 p-2 dark:border-white/10">
             {store.selectedCollectionId ? (
-              <button className="icon-button" title="Volver a colecciones" type="button" onClick={() => store.setCollection(null)}>
+              <button
+                className="icon-button"
+                title="Volver a colecciones"
+                type="button"
+                onClick={() => store.setCollection(null)}
+              >
                 <ChevronLeft size={16} aria-hidden />
               </button>
             ) : null}
@@ -169,10 +175,17 @@ export function ClipboardWindow() {
                 {selectedCollection?.name ?? "Colecciones"}
               </div>
               <div className="text-[11px] text-slate-500 dark:text-slate-400">
-                {selectedCollection ? `${selectedCollection.itemCount} elementos` : "Arrastra elementos para organizarlos"}
+                {selectedCollection
+                  ? `${selectedCollection.itemCount} elementos`
+                  : "Arrastra elementos para organizarlos"}
               </div>
             </div>
-            <button className="icon-button" title="Crear coleccion" type="button" onClick={() => setDialog({ mode: "collection" })}>
+            <button
+              className="icon-button"
+              title="Crear coleccion"
+              type="button"
+              onClick={() => setDialog({ mode: "collection" })}
+            >
               <Plus size={15} aria-hidden />
             </button>
           </div>
@@ -186,17 +199,42 @@ export function ClipboardWindow() {
                   <article
                     key={collection.id}
                     onDragOver={(event) => event.preventDefault()}
-                    onDrop={(event) => dropItemIntoCollection(event, collection.id)}
+                    onDrop={(event) =>
+                      dropItemIntoCollection(event, collection.id)
+                    }
                     className="group flex items-center gap-2 rounded-lg border border-black/10 bg-black/[0.025] p-2.5 transition hover:border-accent/50 hover:bg-accent/5 dark:border-white/10 dark:bg-white/[0.03] dark:hover:bg-white/[0.06]"
                   >
-                    <button className="min-w-0 flex-1 text-left" type="button" onClick={() => store.setCollection(collection.id)}>
-                      <span className="block truncate text-[13px] font-semibold text-slate-900 dark:text-white">{collection.name}</span>
-                      <span className="text-[11px] text-slate-500 dark:text-slate-400">{collection.itemCount} elementos</span>
+                    <button
+                      className="min-w-0 flex-1 text-left"
+                      type="button"
+                      onClick={() => store.setCollection(collection.id)}
+                    >
+                      <span className="block truncate text-[13px] font-semibold text-slate-900 dark:text-white">
+                        {collection.name}
+                      </span>
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                        {collection.itemCount} elementos
+                      </span>
                     </button>
-                    <button title="Renombrar coleccion" type="button" className="icon-button" onClick={() => setDialog({ mode: "renameCollection", collectionId: collection.id })}>
+                    <button
+                      title="Renombrar coleccion"
+                      type="button"
+                      className="icon-button"
+                      onClick={() =>
+                        setDialog({
+                          mode: "renameCollection",
+                          collectionId: collection.id
+                        })
+                      }
+                    >
                       <Pencil size={13} aria-hidden />
                     </button>
-                    <button title="Eliminar coleccion" type="button" className="icon-button danger" onClick={() => void store.deleteCollection(collection.id)}>
+                    <button
+                      title="Eliminar coleccion"
+                      type="button"
+                      className="icon-button danger"
+                      onClick={() => void store.deleteCollection(collection.id)}
+                    >
                       <Trash2 size={13} aria-hidden />
                     </button>
                   </article>
@@ -204,7 +242,8 @@ export function ClipboardWindow() {
               </div>
             ) : (
               <div className="grid h-full place-items-center px-8 text-center text-sm text-slate-500 dark:text-slate-400">
-                Crea tu primera coleccion para organizar prompts, URLs o textos frecuentes.
+                Crea tu primera coleccion para organizar prompts, URLs o textos
+                frecuentes.
               </div>
             )}
           </div>
@@ -222,11 +261,19 @@ export function ClipboardWindow() {
                 onPaste={(id) => void store.paste(id)}
                 onTogglePin={(id) => void store.togglePin(id)}
                 onToggleFavorite={(id) => void store.toggleFavorite(id)}
-                onAddToCollection={(itemId, collectionId) => void store.addToCollection(itemId, collectionId)}
-                onRemoveFromCollection={(itemId, collectionId) => void store.removeFromCollection(itemId, collectionId)}
-                onRename={(selectedItem) => setDialog({ mode: "rename", item: selectedItem })}
+                onAddToCollection={(itemId, collectionId) =>
+                  void store.addToCollection(itemId, collectionId)
+                }
+                onRemoveFromCollection={(itemId, collectionId) =>
+                  void store.removeFromCollection(itemId, collectionId)
+                }
+                onRename={(selectedItem) =>
+                  setDialog({ mode: "rename", item: selectedItem })
+                }
                 onEdit={(selectedItem) => {
-                  if (selectedItem.kind !== "image") setDialog({ mode: "edit", item: selectedItem });
+                  if (selectedItem.kind !== "image") {
+                    setDialog({ mode: "edit", item: selectedItem });
+                  }
                 }}
                 onDelete={(id) => void store.remove(id)}
               />
@@ -238,7 +285,7 @@ export function ClipboardWindow() {
           </div>
         )}
 
-        <footer className="absolute bottom-1.5 left-0 right-0 pointer-events-none text-center text-[10px] text-slate-400/80 dark:text-slate-500/80">
+        <footer className="pointer-events-none absolute bottom-1.5 left-0 right-0 text-center text-[10px] text-slate-400/80 dark:text-slate-500/80">
           Powered by Danny Maaz
         </footer>
 
@@ -285,7 +332,11 @@ export function ClipboardWindow() {
           <InlineDialog
             title="Renombrar coleccion"
             label="Nombre"
-            initialValue={store.collections.find((collection) => collection.id === dialog.collectionId)?.name ?? ""}
+            initialValue={
+              store.collections.find(
+                (collection) => collection.id === dialog.collectionId
+              )?.name ?? ""
+            }
             onClose={() => setDialog(null)}
             onSubmit={(name) => {
               void store.renameCollection(dialog.collectionId, name);
@@ -293,6 +344,8 @@ export function ClipboardWindow() {
             }}
           />
         ) : null}
+
+        <UpdatePrompt updater={updater} />
       </section>
     </main>
   );

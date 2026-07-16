@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf xdg-utils
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Type-check and build frontend
+        run: |
+          npm run lint
+          npm run build
+
+      - name: Format Rust sources for validation
+        run: cargo fmt --manifest-path src-tauri/Cargo.toml --all
+
+      - name: Run Clippy
+        id: clippy
+        shell: bash
+        run: |
+          set +e
+          cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --all-features --message-format=short -- -D warnings > clippy.log 2>&1
+          status=$?
+          tail -n 120 clippy.log
+          exit $status
+
+      - name: Upload Clippy diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: clippy-diagnostics
+          path: clippy.log
+          if-no-files-found: ignore
+          retention-days: 3
+
+      - name: Run Rust tests
+        shell: bash
+        run: |
+          set +e
+          cargo test --manifest-path src-tauri/Cargo.toml --all-features --quiet > tests.log 2>&1
+          status=$?
+          tail -n 120 tests.log
+          exit $status
+
+      - name: Upload Rust test diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rust-test-diagnostics
+          path: tests.log
+          if-no-files-found: ignore
+          retention-days: 3
