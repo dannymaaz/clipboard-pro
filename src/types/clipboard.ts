@@ -31,3 +31,23 @@ export interface AppSettings {
   theme: "system" | "light" | "dark";
   autoStart: boolean;
 }
+
+export interface UpdateInfo {
+  version: string;
+  currentVersion: string;
+  notes: string | null;
+  date: string | null;
+}
+
+export interface UpdateStatus {
+  currentVersion: string;
+  busy: boolean;
+  ready: UpdateInfo | null;
+  lastError: string | null;
+}
+
+export interface UpdateProgress {
+  downloaded: number;
+  total: number | null;
+  percentage: number | null;
+}
