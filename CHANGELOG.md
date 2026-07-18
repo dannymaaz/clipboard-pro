@@ -2,7 +2,7 @@
 
 All notable changes to Clipboard Pro will be documented in this file.
 
-## [0.1.9] - 2026-07-16
+## [0.1.10] - 2026-07-17
 
 ### Added
 
@@ -11,6 +11,7 @@ All notable changes to Clipboard Pro will be documented in this file.
 
 ### Fixed
 
+- Aligned updater packages across Rust and TypeScript for release builds.
 - Added macOS-style left window controls for the custom title bar.
 - Added native minimize and expand commands for the popup window.
 - Hardened clipboard item deletion so collection relations and counters stay consistent.
