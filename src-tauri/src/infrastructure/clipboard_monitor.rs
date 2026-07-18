@@ -45,7 +45,10 @@ pub fn spawn_clipboard_monitor(db: Database, app: AppHandle) {
                                 let _ = db.create_typed_item(
                                     "image",
                                     &content,
-                                    &format!("Imagen copiada · {}×{} px", image.width, image.height),
+                                    &format!(
+                                        "Imagen copiada · {}×{} px",
+                                        image.width, image.height
+                                    ),
                                     Some(&thumbnail),
                                 );
                             }

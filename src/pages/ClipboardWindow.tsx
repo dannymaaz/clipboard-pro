@@ -1,13 +1,16 @@
 import { useEffect, useMemo, useState, type DragEvent, type MouseEvent } from "react";
-import { ChevronLeft, Minus, Pencil, Plus, Settings, Trash2, X } from "lucide-react";
+import { ChevronLeft, Download, Minus, Pencil, Plus, RefreshCw, Settings, Trash2, X } from "lucide-react";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { relaunch } from "@tauri-apps/plugin-process";
+import { check, type Update } from "@tauri-apps/plugin-updater";
+import clsx from "clsx";
 import { ClipboardItemRow } from "../components/ClipboardItemRow";
 import { InlineDialog } from "../components/InlineDialog";
 import { SearchBar } from "../components/SearchBar";
 import { ViewTabs } from "../components/ViewTabs";
 import { VirtualList } from "../components/VirtualList";
-import { clipboardService } from "../services/clipboardService";
+import { clipboardService, type DesktopPlatform } from "../services/clipboardService";
 import { useSystemTheme } from "../hooks/useSystemTheme";
 import { useClipboardStore } from "../store/clipboardStore";
 import type { AppSettings, ClipboardItem } from "../types/clipboard";
@@ -19,15 +22,28 @@ type DialogState =
   | { mode: "renameCollection"; collectionId: string }
   | null;
 
+type UpdateState =
+  | { mode: "idle" }
+  | { mode: "available"; update: Update }
+  | { mode: "downloading"; update: Update; progress: number }
+  | { mode: "error"; message: string };
+
 export function ClipboardWindow() {
   const store = useClipboardStore();
   const [dialog, setDialog] = useState<DialogState>(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [platform, setPlatform] = useState<DesktopPlatform>(detectInitialPlatform);
+  const [updateState, setUpdateState] = useState<UpdateState>({ mode: "idle" });
+  const isMac = platform === "macos";
 
   useSystemTheme(store.settings?.theme);
 
   useEffect(() => {
     void store.load();
+  }, []);
+
+  useEffect(() => {
+    void clipboardService.getPlatform().then(setPlatform).catch(() => setPlatform("unknown"));
   }, []);
 
   useEffect(() => {
@@ -41,6 +57,22 @@ export function ClipboardWindow() {
     });
 
     return () => unlisten?.();
+  }, []);
+
+  useEffect(() => {
+    if (!("__TAURI_INTERNALS__" in window)) return;
+
+    const timer = window.setTimeout(() => {
+      void check({ timeout: 8_000 })
+        .then((update) => {
+          if (update) setUpdateState({ mode: "available", update });
+        })
+        .catch(() => {
+          // A failed background check must never interrupt clipboard use.
+        });
+    }, 800);
+
+    return () => window.clearTimeout(timer);
   }, []);
 
   const startDragging = (event: MouseEvent<HTMLDivElement>) => {
@@ -76,19 +108,58 @@ export function ClipboardWindow() {
     void store.addToCollection(itemId, collectionId);
   };
 
+  const installUpdate = () => {
+    if (updateState.mode !== "available") return;
+
+    const update = updateState.update;
+    let downloadedBytes = 0;
+    let contentLength = 0;
+    setUpdateState({ mode: "downloading", update, progress: 0 });
+
+    void update
+      .downloadAndInstall((event) => {
+        if (event.event === "Started") {
+          contentLength = event.data.contentLength ?? 0;
+          return;
+        }
+
+        if (event.event === "Progress") {
+          downloadedBytes += event.data.chunkLength;
+          const progress = contentLength ? Math.min(99, Math.round((downloadedBytes / contentLength) * 100)) : 0;
+          setUpdateState({ mode: "downloading", update, progress });
+        }
+      })
+      .then(async () => {
+        await relaunch();
+      })
+      .catch(() => {
+        setUpdateState({
+          mode: "error",
+          message: "No se pudo instalar la actualización. Inténtalo de nuevo más tarde.",
+        });
+      });
+  };
+
   return (
     <main className="window-shell">
       <section className="app-panel">
-        <div className="flex h-7 items-center justify-between border-b border-black/10 px-2 text-[11px] text-slate-500 dark:border-white/10 dark:text-slate-400" onMouseDown={startDragging}>
-          <span className="font-semibold tracking-wide text-slate-600 dark:text-slate-300">Clipboard Pro</span>
-          <div className="flex items-center gap-1" onMouseDown={(event) => event.stopPropagation()}>
-            <button className="title-button" title="Ocultar" type="button" onClick={() => void clipboardService.hideWindow()}>
-              <Minus size={13} aria-hidden />
-            </button>
-            <button className="title-button danger" title="Cerrar Clipboard Pro" type="button" onClick={() => void clipboardService.quitApp()}>
-              <X size={13} aria-hidden />
-            </button>
-          </div>
+        <div
+          className={clsx(
+            "relative flex h-7 items-center border-b border-black/10 px-2 text-[11px] text-slate-500 dark:border-white/10 dark:text-slate-400",
+            isMac ? "justify-start" : "justify-between"
+          )}
+          onMouseDown={startDragging}
+        >
+          {isMac ? <WindowControls isMac /> : null}
+          <span
+            className={clsx(
+              "font-semibold tracking-wide text-slate-600 dark:text-slate-300",
+              isMac ? "pointer-events-none absolute left-0 right-0 text-center" : null
+            )}
+          >
+            Clipboard Pro
+          </span>
+          {isMac ? null : <WindowControls isMac={false} />}
         </div>
 
         <div className="flex items-center border-b border-black/10 dark:border-white/10">
@@ -293,7 +364,106 @@ export function ClipboardWindow() {
             }}
           />
         ) : null}
+
+        {updateState.mode !== "idle" ? (
+          <section className="absolute inset-0 z-50 grid place-items-center bg-slate-950/35 p-4 backdrop-blur-[2px]">
+            <div className="w-full max-w-[320px] rounded-xl border border-slate-200 bg-white p-4 shadow-2xl dark:border-slate-700 dark:bg-slate-900">
+              {updateState.mode === "available" ? (
+                <>
+                  <div className="flex items-start gap-3">
+                    <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-blue-600/10 text-blue-600 dark:text-blue-400">
+                      <Download size={18} aria-hidden />
+                    </div>
+                    <div>
+                      <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Actualización disponible</h2>
+                      <p className="mt-1 text-xs leading-5 text-slate-600 dark:text-slate-300">Clipboard Pro {updateState.update.version} está lista para instalar.</p>
+                    </div>
+                  </div>
+                  <p className="mt-3 text-[11px] leading-4 text-slate-500 dark:text-slate-400">Tu historial, favoritos, colecciones y preferencias se conservarán.</p>
+                  <div className="mt-4 flex justify-end gap-2">
+                    <button className="text-button" type="button" onClick={() => setUpdateState({ mode: "idle" })}>Más tarde</button>
+                    <button className="primary-button" type="button" onClick={installUpdate}>Actualizar</button>
+                  </div>
+                </>
+              ) : null}
+
+              {updateState.mode === "downloading" ? (
+                <>
+                  <div className="flex items-center gap-3">
+                    <RefreshCw className="animate-spin text-blue-600 dark:text-blue-400" size={18} aria-hidden />
+                    <div>
+                      <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Instalando actualización</h2>
+                      <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">La aplicación se reiniciará al terminar.</p>
+                    </div>
+                  </div>
+                  <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+                    <div className="h-full rounded-full bg-blue-600 transition-[width] duration-150" style={{ width: `${updateState.progress || 8}%` }} />
+                  </div>
+                </>
+              ) : null}
+
+              {updateState.mode === "error" ? (
+                <>
+                  <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Actualización no completada</h2>
+                  <p className="mt-2 text-xs leading-5 text-slate-600 dark:text-slate-300">{updateState.message}</p>
+                  <div className="mt-4 flex justify-end">
+                    <button className="primary-button" type="button" onClick={() => setUpdateState({ mode: "idle" })}>Entendido</button>
+                  </div>
+                </>
+              ) : null}
+            </div>
+          </section>
+        ) : null}
       </section>
     </main>
   );
+}
+
+function WindowControls({ isMac }: { isMac: boolean }) {
+  if (isMac) {
+    return (
+      <div className="z-10 flex items-center gap-2" onMouseDown={(event) => event.stopPropagation()}>
+        <button
+          className="traffic-button close"
+          title="Cerrar ventana"
+          type="button"
+          onClick={() => void clipboardService.hideWindow()}
+        />
+        <button
+          className="traffic-button minimize"
+          title="Minimizar"
+          type="button"
+          onClick={() => void clipboardService.minimizeWindow()}
+        />
+        <button
+          className="traffic-button maximize"
+          title="Expandir"
+          type="button"
+          onClick={() => void clipboardService.toggleMaximizeWindow()}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-1" onMouseDown={(event) => event.stopPropagation()}>
+      <button className="title-button" title="Ocultar" type="button" onClick={() => void clipboardService.hideWindow()}>
+        <Minus size={13} aria-hidden />
+      </button>
+      <button className="title-button danger" title="Cerrar Clipboard Pro" type="button" onClick={() => void clipboardService.quitApp()}>
+        <X size={13} aria-hidden />
+      </button>
+    </div>
+  );
+}
+
+function detectInitialPlatform(): DesktopPlatform {
+  if (typeof navigator === "undefined") return "unknown";
+  const platform = navigator.platform.toLowerCase();
+  const userAgent = navigator.userAgent.toLowerCase();
+
+  if (platform.includes("mac") || userAgent.includes("mac os")) return "macos";
+  if (platform.includes("win") || userAgent.includes("windows")) return "windows";
+  if (platform.includes("linux") || userAgent.includes("linux")) return "linux";
+  return "unknown";
 }

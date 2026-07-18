@@ -1,7 +1,7 @@
 {
   "name": "clipboard-pro",
   "private": true,
-  "version": "0.1.8",
+  "version": "0.1.9",
   "type": "module",
   "description": "Clipboard Pro is a fast, local-first, cross-platform clipboard upgrade built with Tauri, Rust, React and SQLite.",
   "author": {
@@ -24,6 +24,8 @@
   "dependencies": {
     "@tauri-apps/api": "^2.0.0",
     "@tauri-apps/plugin-global-shortcut": "^2.0.0",
+    "@tauri-apps/plugin-process": "^2.2.0",
+    "@tauri-apps/plugin-updater": "^2.10.0",
     "clsx": "^2.1.1",
     "lucide-react": "^0.468.0",
     "react": "^19.2.7",

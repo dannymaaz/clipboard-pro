@@ -1,5 +1,9 @@
 # Instalacion y Descarga
 
+## Actualizaciones
+
+Cuando exista una nueva version, Clipboard Pro la mostrara al abrirse. Al confirmarla, descarga un paquete firmado desde GitHub Releases y reinicia la aplicacion. El historial, favoritos, colecciones y preferencias se mantienen porque se guardan en el directorio local de datos de la aplicacion, separado de los archivos del programa.
+
 ## Descarga Rapida
 
 Los scripts de macOS y Linux usan `curl` y `node` para encontrar automaticamente el asset mas reciente. Si prefieres no usar scripts, usa GitHub CLI con `gh release download`.
@@ -131,8 +135,8 @@ Los artefactos quedan en `src-tauri/target/release/bundle/appimage` y `src-tauri
 Para publicar una version:
 
 ```bash
-git tag v0.1.8
-git push origin v0.1.8
+git tag v0.1.9
+git push origin v0.1.9
 ```
 
 GitHub Actions generara una release publica para Windows, macOS y Linux usando `.github/workflows/release.yml`.

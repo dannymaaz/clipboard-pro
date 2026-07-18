@@ -73,6 +73,8 @@ const mockSettings: AppSettings = {
   autoStart: false
 };
 
+export type DesktopPlatform = "windows" | "macos" | "linux" | "unknown";
+
 const mockService = {
   listItems: async () => mockItems,
   searchItems: async (query: string) => {
@@ -150,6 +152,7 @@ const mockService = {
     const item = mockItems.find((candidate) => candidate.id === itemId);
     return updateMockItem(itemId, { collections: item?.collections.filter((id) => id !== collectionId) ?? [] });
   },
+  getPlatform: async (): Promise<DesktopPlatform> => "unknown",
   getSettings: async () => mockSettings,
   updateHistoryLimit: async (historyLimit: AppSettings["historyLimit"]) => ({ ...mockSettings, historyLimit }),
   updateAutoStart: async (autoStart: boolean) => ({ ...mockSettings, autoStart })
@@ -189,6 +192,7 @@ export const clipboardService = {
     isTauri
       ? invoke<ClipboardItem>("remove_from_collection", { itemId, collectionId })
       : mockService.removeFromCollection(itemId, collectionId),
+  getPlatform: () => (isTauri ? invoke<DesktopPlatform>("get_platform") : mockService.getPlatform()),
   getSettings: () => (isTauri ? invoke<AppSettings>("get_settings") : mockService.getSettings()),
   updateHistoryLimit: (historyLimit: AppSettings["historyLimit"]) =>
     isTauri ? invoke<AppSettings>("update_history_limit", { historyLimit }) : mockService.updateHistoryLimit(historyLimit),
@@ -196,5 +200,6 @@ export const clipboardService = {
     isTauri ? invoke<AppSettings>("update_auto_start", { autoStart }) : mockService.updateAutoStart(autoStart),
   hideWindow: () => (isTauri ? invoke<void>("hide_window") : Promise.resolve()),
   minimizeWindow: () => (isTauri ? invoke<void>("minimize_window") : Promise.resolve()),
+  toggleMaximizeWindow: () => (isTauri ? invoke<void>("toggle_maximize_window") : Promise.resolve()),
   quitApp: () => (isTauri ? invoke<void>("quit_app") : Promise.resolve())
 };

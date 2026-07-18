@@ -1,4 +1,6 @@
-use crate::domain::models::{AppSettings, ClipboardItem, ClipboardKind, Collection, ImageClipboardContent};
+use crate::domain::models::{
+    AppSettings, ClipboardItem, ClipboardKind, Collection, ImageClipboardContent,
+};
 use crate::infrastructure::clipboard_monitor::CLIPBOARD_CHANGED_EVENT;
 use crate::{AppState, LifecycleState};
 use arboard::{Clipboard, ImageData};
@@ -15,12 +17,18 @@ pub fn list_items(state: State<'_, AppState>) -> Result<Vec<ClipboardItem>, Stri
 }
 
 #[tauri::command]
-pub fn search_items(state: State<'_, AppState>, query: String) -> Result<Vec<ClipboardItem>, String> {
+pub fn search_items(
+    state: State<'_, AppState>,
+    query: String,
+) -> Result<Vec<ClipboardItem>, String> {
     state.db.search_items(&query)
 }
 
 #[tauri::command]
-pub fn create_text_item(state: State<'_, AppState>, content: String) -> Result<ClipboardItem, String> {
+pub fn create_text_item(
+    state: State<'_, AppState>,
+    content: String,
+) -> Result<ClipboardItem, String> {
     state.db.create_text_item(&content)
 }
 
@@ -89,6 +97,18 @@ pub fn minimize_window(app: AppHandle) -> Result<(), String> {
 }
 
 #[tauri::command]
+pub fn toggle_maximize_window(app: AppHandle) -> Result<(), String> {
+    if let Some(window) = app.get_webview_window("main") {
+        if window.is_maximized().map_err(|error| error.to_string())? {
+            window.unmaximize().map_err(|error| error.to_string())?;
+        } else {
+            window.maximize().map_err(|error| error.to_string())?;
+        }
+    }
+    Ok(())
+}
+
+#[tauri::command]
 pub fn quit_app(app: AppHandle) {
     if let Some(lifecycle) = app.try_state::<LifecycleState>() {
         lifecycle.is_quitting.store(true, Ordering::SeqCst);
@@ -97,18 +117,31 @@ pub fn quit_app(app: AppHandle) {
 }
 
 #[tauri::command]
-pub fn rename_item(state: State<'_, AppState>, id: String, title: String) -> Result<ClipboardItem, String> {
+pub fn rename_item(
+    state: State<'_, AppState>,
+    id: String,
+    title: String,
+) -> Result<ClipboardItem, String> {
     state.db.rename_item(&id, &title)
 }
 
 #[tauri::command]
-pub fn edit_text_item(state: State<'_, AppState>, id: String, content: String) -> Result<ClipboardItem, String> {
+pub fn edit_text_item(
+    state: State<'_, AppState>,
+    id: String,
+    content: String,
+) -> Result<ClipboardItem, String> {
     state.db.edit_text_item(&id, &content)
 }
 
 #[tauri::command]
 pub fn delete_item(state: State<'_, AppState>, id: String) -> Result<(), String> {
     state.db.delete_item(&id)
+}
+
+#[tauri::command]
+pub fn get_platform() -> String {
+    std::env::consts::OS.to_string()
 }
 
 #[tauri::command]
@@ -132,7 +165,11 @@ pub fn create_collection(state: State<'_, AppState>, name: String) -> Result<Col
 }
 
 #[tauri::command]
-pub fn rename_collection(state: State<'_, AppState>, id: String, name: String) -> Result<Collection, String> {
+pub fn rename_collection(
+    state: State<'_, AppState>,
+    id: String,
+    name: String,
+) -> Result<Collection, String> {
     state.db.rename_collection(&id, &name)
 }
 
@@ -165,7 +202,10 @@ pub fn get_settings(state: State<'_, AppState>) -> Result<AppSettings, String> {
 }
 
 #[tauri::command]
-pub fn update_history_limit(state: State<'_, AppState>, history_limit: i64) -> Result<AppSettings, String> {
+pub fn update_history_limit(
+    state: State<'_, AppState>,
+    history_limit: i64,
+) -> Result<AppSettings, String> {
     state.db.update_history_limit(history_limit)
 }
 
@@ -178,9 +218,13 @@ pub fn update_auto_start(
     use tauri_plugin_autostart::ManagerExt;
 
     if auto_start {
-        app.autolaunch().enable().map_err(|error| error.to_string())?;
+        app.autolaunch()
+            .enable()
+            .map_err(|error| error.to_string())?;
     } else {
-        app.autolaunch().disable().map_err(|error| error.to_string())?;
+        app.autolaunch()
+            .disable()
+            .map_err(|error| error.to_string())?;
     }
 
     state.db.update_auto_start(auto_start)

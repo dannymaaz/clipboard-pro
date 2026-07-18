@@ -96,7 +96,8 @@ export const useClipboardStore = create<ClipboardState>((set, get) => ({
 
   remove: async (id) => {
     await clipboardService.deleteItem(id);
-    set({ items: get().items.filter((item) => item.id !== id) });
+    const collections = await clipboardService.listCollections();
+    set({ items: get().items.filter((item) => item.id !== id), collections });
   },
 
   createCollection: async (name) => {

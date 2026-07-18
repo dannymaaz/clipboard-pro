@@ -2,6 +2,19 @@
 
 All notable changes to Clipboard Pro will be documented in this file.
 
+## [0.1.9] - 2026-07-16
+
+### Added
+
+- Added signed in-app update checks with a direct install and restart flow.
+- Added GitHub Release updater artifacts for Windows, macOS and Linux.
+
+### Fixed
+
+- Added macOS-style left window controls for the custom title bar.
+- Added native minimize and expand commands for the popup window.
+- Hardened clipboard item deletion so collection relations and counters stay consistent.
+
 ## [0.1.8] - 2026-06-08
 
 ### Fixed

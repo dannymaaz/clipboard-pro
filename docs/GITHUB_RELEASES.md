@@ -27,9 +27,11 @@ El repositorio publico del proyecto es `dannymaaz/clipboard-pro`.
 
 ## 3. Crear una version
 
+Antes de publicar la primera version con actualizacion automatica, configura el secreto de GitHub `TAURI_SIGNING_PRIVATE_KEY`. Esta clave firma cada actualizacion; no debe guardarse en el repositorio ni compartirse.
+
 ```bash
-git tag v0.1.8
-git push origin v0.1.8
+git tag v0.1.9
+git push origin v0.1.9
 ```
 
 GitHub ejecutara `.github/workflows/release.yml` y creara una release publica con artefactos para:
@@ -37,6 +39,8 @@ GitHub ejecutara `.github/workflows/release.yml` y creara una release publica co
 - Windows: `.exe` y `.msi`
 - macOS: `.dmg` para Apple Silicon e Intel
 - Linux: `.AppImage` y `.deb`
+
+Tambien publica `latest.json` y firmas de los paquetes. Clipboard Pro consulta ese archivo al abrirse, muestra la nueva version disponible y conserva el historial local al actualizar.
 
 ## 4. Descargar instaladores
 

@@ -36,6 +36,7 @@ Clipboard Pro es una aplicacion de escritorio moderna, minimalista, ultrarrapida
 - Atajo global predeterminado `Ctrl + Alt + V`.
 - Inicio automatico configurable desde preferencias.
 - Privacidad total: sin cloud, sin telemetria, sin analytics y sin servicios externos.
+- Actualizaciones firmadas desde GitHub Releases, con instalacion desde la propia aplicacion y datos locales intactos.
 
 ## Capturas
 

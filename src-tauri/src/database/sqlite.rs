@@ -27,7 +27,10 @@ struct RawItem {
 
 impl Database {
     pub fn new(app: &AppHandle) -> Result<Self, String> {
-        let data_dir = app.path().app_data_dir().map_err(|error| error.to_string())?;
+        let data_dir = app
+            .path()
+            .app_data_dir()
+            .map_err(|error| error.to_string())?;
         fs::create_dir_all(&data_dir).map_err(|error| error.to_string())?;
         let db_path = data_dir.join("clipboard-pro.sqlite3");
         let conn = Connection::open(db_path).map_err(|error| error.to_string())?;
@@ -96,7 +99,12 @@ impl Database {
     }
 
     pub fn create_text_item(&self, content: &str) -> Result<ClipboardItem, String> {
-        self.create_typed_item(detect_kind(content).as_str(), content, &make_preview(content), None)
+        self.create_typed_item(
+            detect_kind(content).as_str(),
+            content,
+            &make_preview(content),
+            None,
+        )
     }
 
     pub fn create_typed_item(
@@ -175,6 +183,11 @@ impl Database {
 
     pub fn delete_item(&self, id: &str) -> Result<(), String> {
         let conn = self.conn.lock().map_err(|error| error.to_string())?;
+        conn.execute(
+            "DELETE FROM collection_items WHERE item_id = ?1",
+            params![id],
+        )
+        .map_err(|error| error.to_string())?;
         conn.execute("DELETE FROM clipboard_items WHERE id = ?1", params![id])
             .map_err(|error| error.to_string())?;
         Ok(())
@@ -204,9 +217,10 @@ impl Database {
         let conn = self.conn.lock().map_err(|error| error.to_string())?;
         let mut stmt = conn
             .prepare(
-                "SELECT c.id, c.name, COUNT(ci.item_id) AS item_count, c.created_at, c.updated_at
+                "SELECT c.id, c.name, COUNT(item.id) AS item_count, c.created_at, c.updated_at
                  FROM collections c
                  LEFT JOIN collection_items ci ON ci.collection_id = c.id
+                 LEFT JOIN clipboard_items item ON item.id = ci.item_id
                  GROUP BY c.id
                  ORDER BY c.updated_at DESC",
             )
@@ -252,12 +266,21 @@ impl Database {
 
     pub fn delete_collection(&self, id: &str) -> Result<(), String> {
         let conn = self.conn.lock().map_err(|error| error.to_string())?;
+        conn.execute(
+            "DELETE FROM collection_items WHERE collection_id = ?1",
+            params![id],
+        )
+        .map_err(|error| error.to_string())?;
         conn.execute("DELETE FROM collections WHERE id = ?1", params![id])
             .map_err(|error| error.to_string())?;
         Ok(())
     }
 
-    pub fn add_to_collection(&self, item_id: &str, collection_id: &str) -> Result<ClipboardItem, String> {
+    pub fn add_to_collection(
+        &self,
+        item_id: &str,
+        collection_id: &str,
+    ) -> Result<ClipboardItem, String> {
         let conn = self.conn.lock().map_err(|error| error.to_string())?;
         let now = now();
         conn.execute(
@@ -268,7 +291,11 @@ impl Database {
         self.fetch_item_locked(&conn, item_id)
     }
 
-    pub fn remove_from_collection(&self, item_id: &str, collection_id: &str) -> Result<ClipboardItem, String> {
+    pub fn remove_from_collection(
+        &self,
+        item_id: &str,
+        collection_id: &str,
+    ) -> Result<ClipboardItem, String> {
         let conn = self.conn.lock().map_err(|error| error.to_string())?;
         conn.execute(
             "DELETE FROM collection_items WHERE item_id = ?1 AND collection_id = ?2",
@@ -330,7 +357,12 @@ impl Database {
         self.hydrate_item(conn, raw, true)
     }
 
-    fn hydrate_item(&self, conn: &Connection, raw: RawItem, include_content: bool) -> Result<ClipboardItem, String> {
+    fn hydrate_item(
+        &self,
+        conn: &Connection,
+        raw: RawItem,
+        include_content: bool,
+    ) -> Result<ClipboardItem, String> {
         let mut stmt = conn
             .prepare(
                 "SELECT collection_id FROM collection_items WHERE item_id = ?1 ORDER BY created_at DESC",
@@ -366,9 +398,10 @@ impl Database {
 
     fn fetch_collection_locked(&self, conn: &Connection, id: &str) -> Result<Collection, String> {
         conn.query_row(
-            "SELECT c.id, c.name, COUNT(ci.item_id) AS item_count, c.created_at, c.updated_at
+            "SELECT c.id, c.name, COUNT(item.id) AS item_count, c.created_at, c.updated_at
              FROM collections c
              LEFT JOIN collection_items ci ON ci.collection_id = c.id
+             LEFT JOIN clipboard_items item ON item.id = ci.item_id
              WHERE c.id = ?1
              GROUP BY c.id",
             params![id],
@@ -406,19 +439,38 @@ impl Database {
         Ok(())
     }
 
-    fn get_setting_locked(&self, conn: &Connection, key: &str, fallback: &str) -> Result<String, String> {
-        conn.query_row("SELECT value FROM settings WHERE key = ?1", params![key], |row| row.get(0))
-            .optional()
-            .map_err(|error| error.to_string())
-            .map(|value| value.unwrap_or_else(|| fallback.to_string()))
+    fn get_setting_locked(
+        &self,
+        conn: &Connection,
+        key: &str,
+        fallback: &str,
+    ) -> Result<String, String> {
+        conn.query_row(
+            "SELECT value FROM settings WHERE key = ?1",
+            params![key],
+            |row| row.get(0),
+        )
+        .optional()
+        .map_err(|error| error.to_string())
+        .map(|value| value.unwrap_or_else(|| fallback.to_string()))
     }
 
-    fn get_setting_i64_locked(&self, conn: &Connection, key: &str, fallback: i64) -> Result<i64, String> {
+    fn get_setting_i64_locked(
+        &self,
+        conn: &Connection,
+        key: &str,
+        fallback: i64,
+    ) -> Result<i64, String> {
         let value = self.get_setting_locked(conn, key, &fallback.to_string())?;
         Ok(value.parse::<i64>().unwrap_or(fallback))
     }
 
-    fn get_setting_bool_locked(&self, conn: &Connection, key: &str, fallback: bool) -> Result<bool, String> {
+    fn get_setting_bool_locked(
+        &self,
+        conn: &Connection,
+        key: &str,
+        fallback: bool,
+    ) -> Result<bool, String> {
         let value = self.get_setting_locked(conn, key, if fallback { "true" } else { "false" })?;
         Ok(matches!(value.as_str(), "true" | "1" | "yes"))
     }
@@ -443,6 +495,13 @@ fn map_raw_item(row: &rusqlite::Row<'_>) -> rusqlite::Result<RawItem> {
 
 fn migrate(conn: &Connection) -> Result<(), String> {
     let _ = conn.execute("ALTER TABLE clipboard_items ADD COLUMN thumbnail TEXT", []);
+    conn.execute(
+        "DELETE FROM collection_items
+         WHERE item_id NOT IN (SELECT id FROM clipboard_items)
+            OR collection_id NOT IN (SELECT id FROM collections)",
+        [],
+    )
+    .map_err(|error| error.to_string())?;
     conn.execute(
         "INSERT OR IGNORE INTO settings(key, value) VALUES ('auto_start', 'false')",
         [],

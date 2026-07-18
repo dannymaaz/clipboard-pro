@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Clipboard Pro",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "identifier": "com.dannymaaz.clipboardpro",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -18,6 +18,7 @@
   },
   "bundle": {
     "active": true,
+    "createUpdaterArtifacts": true,
     "category": "Productivity",
     "copyright": "Copyright Danny Maaz",
     "icon": [
@@ -29,5 +30,13 @@
     ],
     "shortDescription": "Fast local clipboard upgrade",
     "longDescription": "Clipboard Pro is a fast, private, local-first clipboard manager for Windows, macOS and Linux."
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDdBOUY3NjI1OEZGRkE1RjUKUldUMXBmK1BKWGFmZW5WWVBuOVVIT1dESXk3R1NSZ014WmJmeWE4NWFNVnF3NXVLZnhOWlRIZVYK",
+      "endpoints": [
+        "https://github.com/dannymaaz/clipboard-pro/releases/latest/download/latest.json"
+      ]
+    }
   }
 }

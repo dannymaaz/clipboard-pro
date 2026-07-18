@@ -5,14 +5,14 @@ mod infrastructure;
 
 use application::commands;
 use database::sqlite::Database;
+use std::sync::atomic::{AtomicBool, Ordering};
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     AppHandle, Manager, WebviewUrl, WebviewWindowBuilder,
 };
-use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 use tauri_plugin_autostart::ManagerExt;
-use std::sync::atomic::{AtomicBool, Ordering};
+use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 
 pub struct AppState {
     pub db: Database,
@@ -28,6 +28,8 @@ const WINDOW_HEIGHT: f64 = 540.0;
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_autostart::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(
             tauri_plugin_global_shortcut::Builder::new()
                 .with_handler(|app, pressed_shortcut, event| {
@@ -47,7 +49,10 @@ pub fn run() {
             app.global_shortcut().register(shortcut)?;
 
             let database = Database::new(app.handle())?;
-            infrastructure::clipboard_monitor::spawn_clipboard_monitor(database.clone(), app.handle().clone());
+            infrastructure::clipboard_monitor::spawn_clipboard_monitor(
+                database.clone(),
+                app.handle().clone(),
+            );
             let settings = database.get_settings()?;
             if settings.auto_start {
                 let _ = app.autolaunch().enable();
@@ -67,6 +72,7 @@ pub fn run() {
             commands::rename_item,
             commands::edit_text_item,
             commands::delete_item,
+            commands::get_platform,
             commands::toggle_pin,
             commands::toggle_favorite,
             commands::list_collections,
@@ -80,6 +86,7 @@ pub fn run() {
             commands::update_auto_start,
             commands::hide_window,
             commands::minimize_window,
+            commands::toggle_maximize_window,
             commands::quit_app
         ])
         .build(tauri::generate_context!())
@@ -102,7 +109,8 @@ fn show_main_window(app: &AppHandle) -> tauri::Result<()> {
             .title("Clipboard Pro")
             .inner_size(WINDOW_WIDTH, WINDOW_HEIGHT)
             .min_inner_size(WINDOW_WIDTH, WINDOW_HEIGHT)
-            .resizable(false)
+            .resizable(true)
+            .maximizable(true)
             .decorations(false)
             .transparent(true)
             .always_on_top(true)

@@ -114,6 +114,34 @@ textarea {
     color: rgb(220 38 38);
   }
 
+  .traffic-button {
+    width: 12px;
+    height: 12px;
+    border-radius: 999px;
+    border: 1px solid rgb(15 23 42 / 0.16);
+    box-shadow: inset 0 0 0 0.5px rgb(255 255 255 / 0.35);
+  }
+
+  .traffic-button.close {
+    background: rgb(255 95 87);
+  }
+
+  .traffic-button.minimize {
+    background: rgb(255 189 46);
+  }
+
+  .traffic-button.maximize {
+    background: rgb(40 201 64);
+  }
+
+  .traffic-button:hover {
+    filter: brightness(0.95);
+  }
+
+  .traffic-button:active {
+    transform: scale(0.92);
+  }
+
   .dark .title-button {
     color: rgb(203 213 225);
   }
