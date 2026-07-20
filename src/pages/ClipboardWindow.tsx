@@ -306,7 +306,10 @@ export function ClipboardWindow() {
               <div className="theme-surface rounded-xl p-3 text-xs">
                 <span className="font-semibold">Captura de pantalla</span>
                 <p className="mt-1 text-[11px] text-theme-muted">Al continuar, Clipboard Pro puede solicitar permiso del sistema y creará la carpeta de capturas en Imágenes. Podrás eliminar las imágenes cuando quieras.</p>
-                <button className="primary-button mt-3 flex h-8 items-center gap-1 px-3 text-[11px]" type="button" onClick={() => void clipboardService.openCaptureTool("capture").catch((error) => setCaptureMessage(error instanceof Error ? error.message : "No se pudo abrir el capturador."))}><Camera size={14} /> Abrir capturador</button>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button className="primary-button flex h-8 items-center gap-1 px-3 text-[11px]" type="button" onClick={() => void clipboardService.openCaptureTool("capture").catch((error) => setCaptureMessage(error instanceof Error ? error.message : "No se pudo abrir el capturador."))}><Camera size={14} /> Abrir capturador</button>
+                  <button className="text-button h-8 px-3 text-[11px]" type="button" onClick={() => void clipboardService.openCaptureTool("color").catch((error) => setCaptureMessage(error instanceof Error ? error.message : "No se pudo abrir el copiador de colores."))}>Copiar color</button>
+                </div>
                 {captureMessage ? <p className="mt-2 text-[11px] text-theme-muted" role="status">{captureMessage}</p> : null}
               </div>
             </div>
