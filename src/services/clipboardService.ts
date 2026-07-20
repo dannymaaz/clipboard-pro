@@ -162,6 +162,8 @@ const mockService = {
   updateAccent: async (accent: AppSettings["accent"]) => updateMockSettings({ accent }),
   updateCaptureEnabled: async (captureEnabled: boolean) => updateMockSettings({ captureEnabled }),
   updateShortcut: async (shortcut: string) => updateMockSettings({ shortcut }),
+  takeScreenshot: async () => mockService.createTextItem("Captura de pantalla de ejemplo"),
+  getScreenshotDirectory: async () => "Imágenes/Clipboard Pro Screenshots",
   getAppVersion: async () => "0.2.0"
 };
 
@@ -220,6 +222,8 @@ export const clipboardService = {
       : mockService.updateCaptureEnabled(captureEnabled),
   updateShortcut: (shortcut: string) =>
     isTauri ? invoke<AppSettings>("update_shortcut", { shortcut }) : mockService.updateShortcut(shortcut),
+  takeScreenshot: () => (isTauri ? invoke<ClipboardItem>("take_screenshot") : mockService.takeScreenshot()),
+  getScreenshotDirectory: () => (isTauri ? invoke<string>("get_screenshot_directory") : mockService.getScreenshotDirectory()),
   getAppVersion: () => (isTauri ? invoke<string>("get_app_version") : mockService.getAppVersion()),
   hideWindow: () => (isTauri ? invoke<void>("hide_window") : Promise.resolve()),
   minimizeWindow: () => (isTauri ? invoke<void>("minimize_window") : Promise.resolve()),

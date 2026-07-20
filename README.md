@@ -35,6 +35,8 @@ Clipboard Pro es una aplicacion de escritorio moderna, minimalista, ultrarrapida
 - Renombrado visual y edicion segura solo para texto.
 - Atajo global predeterminado `Ctrl + Alt + V`.
 - Inicio automatico configurable desde preferencias.
+- Grabador visual para configurar el atajo global sin memorizar su sintaxis.
+- Captura manual de la pantalla principal: la copia al portapapeles, la añade al historial y conserva un PNG local en `Imágenes/Clipboard Pro Screenshots`.
 - Privacidad total: sin cloud, sin telemetria, sin analytics y sin servicios externos.
 - Actualizaciones firmadas desde GitHub Releases, con instalacion desde la propia aplicacion y datos locales intactos.
 
@@ -116,6 +118,7 @@ npm run tauri:build
 - Selecciona un elemento para copiarlo, ocultar la ventana y pegarlo en la app activa.
 - Usa el menu de tres puntos para copiar, pinear, marcar favorito, agregar a coleccion, renombrar, editar o eliminar.
 - Crea colecciones para organizar prompts, URLs, trabajo, universidad, clientes o codigo.
+- En preferencias puedes grabar un atajo y realizar una captura de pantalla. En macOS, el sistema puede solicitar permiso de grabación de pantalla.
 - La app queda en la bandeja del sistema; el inicio automatico se puede activar o desactivar en preferencias.
 
 ## Arquitectura

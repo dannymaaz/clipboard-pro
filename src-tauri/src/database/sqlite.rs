@@ -349,7 +349,12 @@ impl Database {
     }
 
     pub fn update_accent(&self, accent: &str) -> Result<AppSettings, String> {
-        if !["blue", "violet", "green", "orange", "rose"].contains(&accent) {
+        if ![
+            "blue", "indigo", "violet", "fuchsia", "rose", "red", "orange", "amber", "green",
+            "emerald", "teal", "cyan",
+        ]
+        .contains(&accent)
+        {
             return Err("Unsupported accent color".into());
         }
         self.update_setting("accent", accent)

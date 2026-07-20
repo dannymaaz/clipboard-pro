@@ -8,7 +8,7 @@ use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::sync::{
     atomic::{AtomicBool, Ordering},
-    Arc,
+    Arc, Mutex,
 };
 use std::{thread, time::Duration};
 use tauri::{AppHandle, Emitter};
@@ -17,7 +17,12 @@ pub const CLIPBOARD_CHANGED_EVENT: &str = "clipboard-pro://items-changed";
 const POLL_INTERVAL: Duration = Duration::from_millis(900);
 const MAX_IMAGE_PIXELS: u64 = 6_000_000;
 
-pub fn spawn_clipboard_monitor(db: Database, app: AppHandle, capture_enabled: Arc<AtomicBool>) {
+pub fn spawn_clipboard_monitor(
+    db: Database,
+    app: AppHandle,
+    capture_enabled: Arc<AtomicBool>,
+    skipped_capture_image: Arc<Mutex<Option<String>>>,
+) {
     let _ = thread::Builder::new()
         .name("clipboard-pro-monitor".into())
         .spawn(move || {
@@ -39,28 +44,38 @@ pub fn spawn_clipboard_monitor(db: Database, app: AppHandle, capture_enabled: Ar
                             last_seen = text;
                         }
                     } else if let Ok(image) = clipboard.get_image() {
-                        let mut hasher = DefaultHasher::new();
-                        image.bytes.hash(&mut hasher);
-                        let fingerprint = format!(
-                            "image:{}x{}:{:x}",
-                            image.width,
-                            image.height,
-                            hasher.finish()
-                        );
+                        let fingerprint =
+                            image_fingerprint(image.width, image.height, image.bytes.as_ref());
 
                         if fingerprint != last_image_seen {
-                            if let Ok((content, thumbnail)) =
-                                encode_image_item(image.width, image.height, image.bytes.as_ref())
-                            {
-                                let _ = db.create_typed_item(
-                                    "image",
-                                    &content,
-                                    &format!(
-                                        "Imagen copiada · {}×{} px",
-                                        image.width, image.height
-                                    ),
-                                    Some(&thumbnail),
-                                );
+                            let should_skip = skipped_capture_image
+                                .lock()
+                                .ok()
+                                .map(|mut skipped| {
+                                    if skipped.as_deref() == Some(fingerprint.as_str()) {
+                                        skipped.take();
+                                        true
+                                    } else {
+                                        false
+                                    }
+                                })
+                                .unwrap_or(false);
+                            if !should_skip {
+                                if let Ok((content, thumbnail)) = encode_image_item(
+                                    image.width,
+                                    image.height,
+                                    image.bytes.as_ref(),
+                                ) {
+                                    let _ = db.create_typed_item(
+                                        "image",
+                                        &content,
+                                        &format!(
+                                            "Imagen copiada · {}×{} px",
+                                            image.width, image.height
+                                        ),
+                                        Some(&thumbnail),
+                                    );
+                                }
                             }
                             let _ = app.emit(CLIPBOARD_CHANGED_EVENT, ());
                             last_image_seen = fingerprint;
@@ -71,6 +86,12 @@ pub fn spawn_clipboard_monitor(db: Database, app: AppHandle, capture_enabled: Ar
                 thread::sleep(POLL_INTERVAL);
             }
         });
+}
+
+pub fn image_fingerprint(width: usize, height: usize, rgba: &[u8]) -> String {
+    let mut hasher = DefaultHasher::new();
+    rgba.hash(&mut hasher);
+    format!("image:{width}x{height}:{:x}", hasher.finish())
 }
 
 fn encode_image_item(width: usize, height: usize, rgba: &[u8]) -> Result<(String, String), String> {

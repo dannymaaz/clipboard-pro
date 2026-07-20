@@ -2,6 +2,18 @@
 
 All notable changes to Clipboard Pro will be documented in this file.
 
+## [0.2.1] - 2026-07-20
+
+### Added
+
+- Added manual primary-screen capture to the system clipboard, local image history and the user's Pictures folder.
+- Added a visual global-shortcut recorder and twelve selectable accent colors.
+
+### Fixed
+
+- Prevented the clipboard monitor from adding a duplicate entry for an in-app screen capture.
+- Updated Linux build dependencies for the cross-platform capture library.
+
 ## [0.2.0] - 2026-07-20
 
 ### Added

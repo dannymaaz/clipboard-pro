@@ -1,6 +1,6 @@
 [package]
 name = "clipboard-pro"
-version = "0.2.0"
+version = "0.2.1"
 description = "Clipboard Pro desktop application"
 authors = ["Danny Maaz"]
 edition = "2021"
@@ -27,3 +27,4 @@ tauri-plugin-global-shortcut = "2"
 tauri-plugin-process = "2.3.1"
 tauri-plugin-updater = "2.10.0"
 uuid = { version = "1", features = ["v4"] }
+xcap = "0.9.7"

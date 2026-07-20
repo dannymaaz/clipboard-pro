@@ -17,6 +17,7 @@
 - Soporte de documentos como referencias locales.
 - Menu completo de tres puntos.
 - Preferencias de tema, limite de historial y shortcut.
+- Grabador visual de atajos, paleta de doce acentos y captura de pantalla principal guardada localmente.
 - System tray opcional.
 
 ## Beta 0.3
