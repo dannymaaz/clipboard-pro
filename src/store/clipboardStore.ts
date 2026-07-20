@@ -35,6 +35,8 @@ interface ClipboardState {
   updateAccent: (accent: AppSettings["accent"]) => Promise<void>;
   updateCaptureEnabled: (captureEnabled: boolean) => Promise<void>;
   updateShortcut: (shortcut: string) => Promise<void>;
+  updateScreenshotShortcut: (shortcut: string) => Promise<void>;
+  updateColorPickerShortcut: (shortcut: string) => Promise<void>;
 }
 
 const upsertItem = (items: ClipboardItem[], nextItem: ClipboardItem) =>
@@ -190,6 +192,16 @@ export const useClipboardStore = create<ClipboardState>((set, get) => ({
 
   updateShortcut: async (shortcut) => {
     const settings = await clipboardService.updateShortcut(shortcut);
+    set({ settings });
+  },
+
+  updateScreenshotShortcut: async (shortcut) => {
+    const settings = await clipboardService.updateScreenshotShortcut(shortcut);
+    set({ settings });
+  },
+
+  updateColorPickerShortcut: async (shortcut) => {
+    const settings = await clipboardService.updateColorPickerShortcut(shortcut);
     set({ settings });
   }
 }));

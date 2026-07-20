@@ -5,6 +5,7 @@ mod infrastructure;
 
 use application::commands;
 use database::sqlite::Database;
+use image::RgbaImage;
 use std::{
     str::FromStr,
     sync::{
@@ -25,6 +26,9 @@ pub struct AppState {
     pub capture_enabled: Arc<AtomicBool>,
     pub skipped_capture_image: Arc<Mutex<Option<String>>>,
     pub shortcut: Arc<RwLock<Shortcut>>,
+    pub screenshot_shortcut: Arc<RwLock<Shortcut>>,
+    pub color_picker_shortcut: Arc<RwLock<Shortcut>>,
+    pub capture_image: Arc<Mutex<Option<RgbaImage>>>,
 }
 
 pub struct LifecycleState {
@@ -50,6 +54,30 @@ pub fn run() {
                     {
                         let _ = show_main_window(app);
                     }
+                    let screenshot_shortcut = app.try_state::<AppState>().and_then(|state| {
+                        state
+                            .screenshot_shortcut
+                            .read()
+                            .ok()
+                            .map(|shortcut| shortcut.clone())
+                    });
+                    if screenshot_shortcut.as_ref() == Some(pressed_shortcut)
+                        && event.state() == ShortcutState::Pressed
+                    {
+                        let _ = show_capture_tool(app, "capture");
+                    }
+                    let color_picker_shortcut = app.try_state::<AppState>().and_then(|state| {
+                        state
+                            .color_picker_shortcut
+                            .read()
+                            .ok()
+                            .map(|shortcut| shortcut.clone())
+                    });
+                    if color_picker_shortcut.as_ref() == Some(pressed_shortcut)
+                        && event.state() == ShortcutState::Pressed
+                    {
+                        let _ = show_capture_tool(app, "color");
+                    }
                 })
                 .build(),
         )
@@ -61,7 +89,13 @@ pub fn run() {
             let settings = database.get_settings()?;
             let shortcut =
                 Shortcut::from_str(&settings.shortcut).unwrap_or_else(|_| default_shortcut());
+            let screenshot_shortcut = Shortcut::from_str(&settings.screenshot_shortcut)
+                .unwrap_or_else(|_| default_screenshot_shortcut());
+            let color_picker_shortcut = Shortcut::from_str(&settings.color_picker_shortcut)
+                .unwrap_or_else(|_| default_color_picker_shortcut());
             app.global_shortcut().register(shortcut)?;
+            app.global_shortcut().register(screenshot_shortcut)?;
+            app.global_shortcut().register(color_picker_shortcut)?;
             let capture_enabled = Arc::new(AtomicBool::new(settings.capture_enabled));
             let skipped_capture_image = Arc::new(Mutex::new(None));
 
@@ -81,8 +115,12 @@ pub fn run() {
                 capture_enabled,
                 skipped_capture_image,
                 shortcut: Arc::new(RwLock::new(shortcut)),
+                screenshot_shortcut: Arc::new(RwLock::new(screenshot_shortcut)),
+                color_picker_shortcut: Arc::new(RwLock::new(color_picker_shortcut)),
+                capture_image: Arc::new(Mutex::new(None)),
             });
             build_tray(app.handle())?;
+            show_main_window(app.handle())?;
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -98,6 +136,13 @@ pub fn run() {
             commands::get_platform,
             commands::get_app_version,
             commands::take_screenshot,
+            commands::open_capture_tool,
+            commands::get_capture_preview,
+            commands::list_capture_windows,
+            commands::save_capture_region,
+            commands::save_capture_window,
+            commands::pick_capture_color,
+            commands::close_capture_tool,
             commands::get_screenshot_directory,
             commands::toggle_pin,
             commands::toggle_favorite,
@@ -114,6 +159,8 @@ pub fn run() {
             commands::update_accent,
             commands::update_capture_enabled,
             commands::update_shortcut,
+            commands::update_screenshot_shortcut,
+            commands::update_color_picker_shortcut,
             commands::hide_window,
             commands::minimize_window,
             commands::toggle_maximize_window,
@@ -135,6 +182,14 @@ fn default_shortcut() -> Shortcut {
     Shortcut::new(Some(Modifiers::CONTROL | Modifiers::ALT), Code::KeyV)
 }
 
+fn default_screenshot_shortcut() -> Shortcut {
+    Shortcut::new(Some(Modifiers::CONTROL | Modifiers::ALT), Code::KeyS)
+}
+
+fn default_color_picker_shortcut() -> Shortcut {
+    Shortcut::new(Some(Modifiers::CONTROL | Modifiers::ALT), Code::KeyC)
+}
+
 fn show_main_window(app: &AppHandle) -> tauri::Result<()> {
     let window = if let Some(window) = app.get_webview_window("main") {
         window
@@ -148,7 +203,7 @@ fn show_main_window(app: &AppHandle) -> tauri::Result<()> {
             .decorations(false)
             .transparent(true)
             .always_on_top(true)
-            .skip_taskbar(true)
+            .skip_taskbar(false)
             .visible(false)
             .center()
             .build()?
@@ -157,6 +212,35 @@ fn show_main_window(app: &AppHandle) -> tauri::Result<()> {
     window.show()?;
     window.unminimize()?;
     window.set_focus()?;
+    Ok(())
+}
+
+pub fn show_capture_tool(app: &AppHandle, tool: &str) -> Result<(), String> {
+    if let Some(main) = app.get_webview_window("main") {
+        let _ = main.hide();
+    }
+    std::thread::sleep(std::time::Duration::from_millis(140));
+    let image = infrastructure::screen_capture::capture_primary_image()?;
+    *app.state::<AppState>()
+        .capture_image
+        .lock()
+        .map_err(|error| error.to_string())? = Some(image);
+
+    if let Some(window) = app.get_webview_window("capture") {
+        let _ = window.close();
+    }
+    WebviewWindowBuilder::new(
+        app,
+        "capture",
+        WebviewUrl::App(format!("index.html?tool={tool}").into()),
+    )
+    .title("Clipboard Pro Tools")
+    .decorations(false)
+    .fullscreen(true)
+    .always_on_top(true)
+    .skip_taskbar(true)
+    .build()
+    .map_err(|error| error.to_string())?;
     Ok(())
 }
 

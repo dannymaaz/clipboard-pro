@@ -72,6 +72,8 @@ END;
 INSERT OR IGNORE INTO settings(key, value) VALUES
   ('history_limit', '50'),
   ('shortcut', 'Ctrl+Alt+V'),
+  ('screenshot_shortcut', 'Ctrl+Alt+S'),
+  ('color_picker_shortcut', 'Ctrl+Alt+C'),
   ('theme', 'system'),
   ('accent', 'blue'),
   ('auto_start', 'false'),

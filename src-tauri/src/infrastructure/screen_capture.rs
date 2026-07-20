@@ -5,32 +5,111 @@ use base64::{engine::general_purpose, Engine as _};
 use chrono::Utc;
 use image::codecs::png::PngEncoder;
 use image::{imageops::FilterType, ImageEncoder, RgbaImage};
+use serde::Serialize;
 use std::borrow::Cow;
 use std::fs;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use tauri::{AppHandle, Manager};
 use uuid::Uuid;
-use xcap::Monitor;
+use xcap::{Monitor, Window};
 
 const SCREENSHOT_FALLBACK_PIXELS: u64 = 1_000_000;
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CapturePreview {
+    pub data_url: String,
+    pub width: u32,
+    pub height: u32,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CaptureWindow {
+    pub id: u32,
+    pub title: String,
+    pub app_name: String,
+}
 
 pub fn capture_primary_screen(
     app: &AppHandle,
     db: &Database,
     skipped_capture_image: &Arc<Mutex<Option<String>>>,
 ) -> Result<ClipboardItem, String> {
+    persist_capture(app, db, skipped_capture_image, capture_primary_image()?)
+}
+
+pub fn capture_primary_image() -> Result<RgbaImage, String> {
     let monitor = Monitor::all()
         .map_err(|error| error.to_string())?
         .into_iter()
         .find(|monitor| monitor.is_primary().unwrap_or(false))
         .ok_or_else(|| "No se encontró una pantalla disponible".to_string())?;
-    persist_capture(
-        app,
-        db,
-        skipped_capture_image,
-        monitor.capture_image().map_err(|error| error.to_string())?,
-    )
+    monitor.capture_image().map_err(|error| error.to_string())
+}
+
+pub fn preview(image: &RgbaImage) -> Result<CapturePreview, String> {
+    Ok(CapturePreview {
+        data_url: format!(
+            "data:image/png;base64,{}",
+            general_purpose::STANDARD.encode(encode_png(image)?)
+        ),
+        width: image.width(),
+        height: image.height(),
+    })
+}
+
+pub fn list_windows() -> Result<Vec<CaptureWindow>, String> {
+    let windows = Window::all()
+        .map_err(|error| error.to_string())?
+        .into_iter()
+        .filter_map(|window| {
+            let title = window.title().ok()?.trim().to_string();
+            if title.is_empty() || window.is_minimized().ok()? {
+                return None;
+            }
+            Some(CaptureWindow {
+                id: window.id().ok()?,
+                title,
+                app_name: window.app_name().unwrap_or_default(),
+            })
+        })
+        .take(40)
+        .collect::<Vec<_>>();
+    Ok(windows)
+}
+
+pub fn capture_window(id: u32) -> Result<RgbaImage, String> {
+    let window = Window::all()
+        .map_err(|error| error.to_string())?
+        .into_iter()
+        .find(|window| window.id().ok() == Some(id))
+        .ok_or_else(|| "La ventana ya no estÃ¡ disponible".to_string())?;
+    window.capture_image().map_err(|error| error.to_string())
+}
+
+pub fn crop(
+    image: &RgbaImage,
+    x: u32,
+    y: u32,
+    width: u32,
+    height: u32,
+) -> Result<RgbaImage, String> {
+    if width == 0 || height == 0 || x >= image.width() || y >= image.height() {
+        return Err("Selecciona un Ã¡rea vÃ¡lida".into());
+    }
+    let width = width.min(image.width() - x);
+    let height = height.min(image.height() - y);
+    Ok(image::imageops::crop_imm(image, x, y, width, height).to_image())
+}
+
+pub fn color_at(image: &RgbaImage, x: u32, y: u32) -> Result<String, String> {
+    if x >= image.width() || y >= image.height() {
+        return Err("El color seleccionado estÃ¡ fuera de la pantalla".into());
+    }
+    let pixel = image.get_pixel(x, y).0;
+    Ok(format!("#{:02X}{:02X}{:02X}", pixel[0], pixel[1], pixel[2]))
 }
 
 pub fn screenshot_directory(app: &AppHandle) -> Result<PathBuf, String> {
@@ -41,7 +120,7 @@ pub fn screenshot_directory(app: &AppHandle) -> Result<PathBuf, String> {
         .join("Clipboard Pro Screenshots"))
 }
 
-fn persist_capture(
+pub fn persist_capture(
     app: &AppHandle,
     db: &Database,
     skipped_capture_image: &Arc<Mutex<Option<String>>>,

@@ -287,10 +287,26 @@ export function ClipboardWindow() {
                 onSave={(shortcut) => store.updateShortcut(shortcut)}
               />
 
+              <ShortcutRecorder
+                label="Abrir capturador de pantalla"
+                platform={platform}
+                value={store.settings?.screenshotShortcut ?? (isMac ? "Command+Alt+S" : "Ctrl+Alt+S")}
+                defaultShortcut={isMac ? "Command+Alt+S" : "Ctrl+Alt+S"}
+                onSave={(shortcut) => store.updateScreenshotShortcut(shortcut)}
+              />
+
+              <ShortcutRecorder
+                label="Abrir copiador de colores"
+                platform={platform}
+                value={store.settings?.colorPickerShortcut ?? (isMac ? "Command+Alt+C" : "Ctrl+Alt+C")}
+                defaultShortcut={isMac ? "Command+Alt+C" : "Ctrl+Alt+C"}
+                onSave={(shortcut) => store.updateColorPickerShortcut(shortcut)}
+              />
+
               <div className="theme-surface rounded-xl p-3 text-xs">
                 <span className="font-semibold">Captura de pantalla</span>
                 <p className="mt-1 text-[11px] text-theme-muted">Al continuar, Clipboard Pro puede solicitar permiso del sistema y creará la carpeta de capturas en Imágenes. Podrás eliminar las imágenes cuando quieras.</p>
-                <button className="primary-button mt-3 flex h-8 items-center gap-1 px-3 text-[11px]" type="button" onClick={() => void clipboardService.takeScreenshot().then(() => { setCaptureMessage("Captura copiada al portapapeles, guardada e incluida en el historial."); void store.load(); }).catch((error) => setCaptureMessage(error instanceof Error ? error.message : "No se pudo capturar la pantalla."))}><Camera size={14} /> Capturar pantalla</button>
+                <button className="primary-button mt-3 flex h-8 items-center gap-1 px-3 text-[11px]" type="button" onClick={() => void clipboardService.openCaptureTool("capture").catch((error) => setCaptureMessage(error instanceof Error ? error.message : "No se pudo abrir el capturador."))}><Camera size={14} /> Abrir capturador</button>
                 {captureMessage ? <p className="mt-2 text-[11px] text-theme-muted" role="status">{captureMessage}</p> : null}
               </div>
             </div>
