@@ -66,10 +66,12 @@ let mockCollections: Collection[] = [
   }
 ];
 
-const mockSettings: AppSettings = {
+let mockSettings: AppSettings = {
   historyLimit: 50,
   shortcut: "Ctrl+Alt+V",
   theme: "system",
+  accent: "blue",
+  captureEnabled: true,
   autoStart: false
 };
 
@@ -154,9 +156,19 @@ const mockService = {
   },
   getPlatform: async (): Promise<DesktopPlatform> => "unknown",
   getSettings: async () => mockSettings,
-  updateHistoryLimit: async (historyLimit: AppSettings["historyLimit"]) => ({ ...mockSettings, historyLimit }),
-  updateAutoStart: async (autoStart: boolean) => ({ ...mockSettings, autoStart })
+  updateHistoryLimit: async (historyLimit: AppSettings["historyLimit"]) => updateMockSettings({ historyLimit }),
+  updateAutoStart: async (autoStart: boolean) => updateMockSettings({ autoStart }),
+  updateTheme: async (theme: AppSettings["theme"]) => updateMockSettings({ theme }),
+  updateAccent: async (accent: AppSettings["accent"]) => updateMockSettings({ accent }),
+  updateCaptureEnabled: async (captureEnabled: boolean) => updateMockSettings({ captureEnabled }),
+  updateShortcut: async (shortcut: string) => updateMockSettings({ shortcut }),
+  getAppVersion: async () => "0.2.0"
 };
+
+function updateMockSettings(patch: Partial<AppSettings>) {
+  mockSettings = { ...mockSettings, ...patch };
+  return mockSettings;
+}
 
 function updateMockItem(id: string, patch: Partial<ClipboardItem>) {
   mockItems = mockItems.map((item) =>
@@ -198,6 +210,17 @@ export const clipboardService = {
     isTauri ? invoke<AppSettings>("update_history_limit", { historyLimit }) : mockService.updateHistoryLimit(historyLimit),
   updateAutoStart: (autoStart: boolean) =>
     isTauri ? invoke<AppSettings>("update_auto_start", { autoStart }) : mockService.updateAutoStart(autoStart),
+  updateTheme: (theme: AppSettings["theme"]) =>
+    isTauri ? invoke<AppSettings>("update_theme", { theme }) : mockService.updateTheme(theme),
+  updateAccent: (accent: AppSettings["accent"]) =>
+    isTauri ? invoke<AppSettings>("update_accent", { accent }) : mockService.updateAccent(accent),
+  updateCaptureEnabled: (captureEnabled: boolean) =>
+    isTauri
+      ? invoke<AppSettings>("update_capture_enabled", { captureEnabled })
+      : mockService.updateCaptureEnabled(captureEnabled),
+  updateShortcut: (shortcut: string) =>
+    isTauri ? invoke<AppSettings>("update_shortcut", { shortcut }) : mockService.updateShortcut(shortcut),
+  getAppVersion: () => (isTauri ? invoke<string>("get_app_version") : mockService.getAppVersion()),
   hideWindow: () => (isTauri ? invoke<void>("hide_window") : Promise.resolve()),
   minimizeWindow: () => (isTauri ? invoke<void>("minimize_window") : Promise.resolve()),
   toggleMaximizeWindow: () => (isTauri ? invoke<void>("toggle_maximize_window") : Promise.resolve()),

@@ -15,10 +15,12 @@ interface ViewTabsProps {
 
 export function ViewTabs({ activeView, onChange }: ViewTabsProps) {
   return (
-    <div className="grid grid-cols-3 gap-1 border-b border-black/10 p-1.5 dark:border-white/10">
+    <div role="tablist" aria-label="Vistas del portapapeles" className="grid grid-cols-3 gap-1 border-b border-black/10 p-1.5 dark:border-white/10">
       {tabs.map(({ id, label, Icon }) => (
         <button
           key={id}
+          role="tab"
+          aria-selected={activeView === id}
           type="button"
           onClick={() => onChange(id)}
           className={clsx(

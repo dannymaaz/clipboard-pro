@@ -6,10 +6,14 @@ use crate::{AppState, LifecycleState};
 use arboard::{Clipboard, ImageData};
 use base64::{engine::general_purpose, Engine as _};
 use enigo::{Direction, Enigo, Key, Keyboard, Settings};
+use image::ImageReader;
 use std::borrow::Cow;
+use std::io::Cursor;
+use std::str::FromStr;
 use std::sync::atomic::Ordering;
 use std::{thread, time::Duration};
 use tauri::{AppHandle, Emitter, Manager, State};
+use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut};
 
 #[tauri::command]
 pub fn list_items(state: State<'_, AppState>) -> Result<Vec<ClipboardItem>, String> {
@@ -41,13 +45,35 @@ pub fn copy_item(state: State<'_, AppState>, id: String) -> Result<(), String> {
         ClipboardKind::Image => {
             let image: ImageClipboardContent =
                 serde_json::from_str(&item.content).map_err(|error| error.to_string())?;
-            let bytes = general_purpose::STANDARD
-                .decode(image.rgba_base64)
-                .map_err(|error| error.to_string())?;
+            let (width, height, bytes) = if let Some(png_base64) = image.png_base64 {
+                let png = general_purpose::STANDARD
+                    .decode(png_base64)
+                    .map_err(|error| error.to_string())?;
+                let decoded = ImageReader::new(Cursor::new(png))
+                    .with_guessed_format()
+                    .map_err(|error| error.to_string())?
+                    .decode()
+                    .map_err(|error| error.to_string())?
+                    .to_rgba8();
+                (
+                    decoded.width() as usize,
+                    decoded.height() as usize,
+                    decoded.into_raw(),
+                )
+            } else {
+                let bytes = general_purpose::STANDARD
+                    .decode(
+                        image
+                            .rgba_base64
+                            .ok_or_else(|| "Invalid image clipboard item".to_string())?,
+                    )
+                    .map_err(|error| error.to_string())?;
+                (image.width, image.height, bytes)
+            };
             clipboard
                 .set_image(ImageData {
-                    width: image.width,
-                    height: image.height,
+                    width,
+                    height,
                     bytes: Cow::Owned(bytes),
                 })
                 .map_err(|error| error.to_string())?;
@@ -145,6 +171,11 @@ pub fn get_platform() -> String {
 }
 
 #[tauri::command]
+pub fn get_app_version() -> String {
+    env!("CARGO_PKG_VERSION").to_string()
+}
+
+#[tauri::command]
 pub fn toggle_pin(state: State<'_, AppState>, id: String) -> Result<ClipboardItem, String> {
     state.db.toggle_pin(&id)
 }
@@ -228,6 +259,55 @@ pub fn update_auto_start(
     }
 
     state.db.update_auto_start(auto_start)
+}
+
+#[tauri::command]
+pub fn update_theme(state: State<'_, AppState>, theme: String) -> Result<AppSettings, String> {
+    state.db.update_theme(&theme)
+}
+
+#[tauri::command]
+pub fn update_accent(state: State<'_, AppState>, accent: String) -> Result<AppSettings, String> {
+    state.db.update_accent(&accent)
+}
+
+#[tauri::command]
+pub fn update_capture_enabled(
+    state: State<'_, AppState>,
+    capture_enabled: bool,
+) -> Result<AppSettings, String> {
+    state
+        .capture_enabled
+        .store(capture_enabled, Ordering::Relaxed);
+    state.db.update_capture_enabled(capture_enabled)
+}
+
+#[tauri::command]
+pub fn update_shortcut(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    shortcut: String,
+) -> Result<AppSettings, String> {
+    let next = Shortcut::from_str(&shortcut).map_err(|error| format!("Atajo inválido: {error}"))?;
+    let current = state
+        .shortcut
+        .read()
+        .map_err(|error| error.to_string())?
+        .clone();
+    if current == next {
+        return state.db.update_shortcut(&next.to_string());
+    }
+
+    app.global_shortcut()
+        .unregister(current.clone())
+        .map_err(|error| error.to_string())?;
+    if let Err(error) = app.global_shortcut().register(next.clone()) {
+        let _ = app.global_shortcut().register(current);
+        return Err(format!("No se pudo registrar el atajo: {error}"));
+    }
+
+    *state.shortcut.write().map_err(|error| error.to_string())? = next.clone();
+    state.db.update_shortcut(&next.to_string())
 }
 
 fn paste_hotkey() -> Result<(), String> {

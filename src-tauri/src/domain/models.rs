@@ -67,7 +67,9 @@ pub struct AppSettings {
     pub history_limit: i64,
     pub shortcut: String,
     pub theme: String,
+    pub accent: String,
     pub auto_start: bool,
+    pub capture_enabled: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -75,5 +77,8 @@ pub struct AppSettings {
 pub struct ImageClipboardContent {
     pub width: usize,
     pub height: usize,
-    pub rgba_base64: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub png_base64: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rgba_base64: Option<String>,
 }

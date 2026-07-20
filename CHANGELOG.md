@@ -2,6 +2,25 @@
 
 All notable changes to Clipboard Pro will be documented in this file.
 
+## [0.2.0] - 2026-07-20
+
+### Added
+
+- Added selectable system, light and dark themes plus five local accent colors.
+- Added a privacy control to pause clipboard capture without deleting saved items.
+- Added configurable global shortcuts that are registered immediately on Windows, macOS and Linux.
+- Added keyboard navigation for clipboard results and a visible in-app package version.
+- Added an explicit confirmation before deleting clipboard items.
+
+### Changed
+
+- Image clipboard entries now use bounded PNG storage and compact thumbnails instead of raw RGBA payloads.
+- Rebuilt search indexing during migration so image payloads are never indexed or loaded into history lists.
+
+### Security
+
+- Replaced the permissive webview CSP with a local-only policy.
+
 ## [0.1.10] - 2026-07-17
 
 ### Added

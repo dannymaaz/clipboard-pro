@@ -28,10 +28,15 @@ interface ClipboardState {
   removeFromCollection: (itemId: string, collectionId: string) => Promise<void>;
   updateHistoryLimit: (historyLimit: AppSettings["historyLimit"]) => Promise<void>;
   updateAutoStart: (autoStart: boolean) => Promise<void>;
+  updateTheme: (theme: AppSettings["theme"]) => Promise<void>;
+  updateAccent: (accent: AppSettings["accent"]) => Promise<void>;
+  updateCaptureEnabled: (captureEnabled: boolean) => Promise<void>;
+  updateShortcut: (shortcut: string) => Promise<void>;
 }
 
 const upsertItem = (items: ClipboardItem[], nextItem: ClipboardItem) =>
   items.map((item) => (item.id === nextItem.id ? nextItem : item));
+let searchRequest = 0;
 
 export const useClipboardStore = create<ClipboardState>((set, get) => ({
   items: [],
@@ -54,11 +59,12 @@ export const useClipboardStore = create<ClipboardState>((set, get) => ({
   },
 
   search: async (query) => {
+    const request = ++searchRequest;
     set({ query });
     const items = query.trim()
       ? await clipboardService.searchItems(query)
       : await clipboardService.listItems();
-    set({ items });
+    if (request === searchRequest) set({ items });
   },
 
   setView: (activeView) => set({ activeView, selectedCollectionId: null }),
@@ -144,6 +150,26 @@ export const useClipboardStore = create<ClipboardState>((set, get) => ({
 
   updateAutoStart: async (autoStart) => {
     const settings = await clipboardService.updateAutoStart(autoStart);
+    set({ settings });
+  },
+
+  updateTheme: async (theme) => {
+    const settings = await clipboardService.updateTheme(theme);
+    set({ settings });
+  },
+
+  updateAccent: async (accent) => {
+    const settings = await clipboardService.updateAccent(accent);
+    set({ settings });
+  },
+
+  updateCaptureEnabled: async (captureEnabled) => {
+    const settings = await clipboardService.updateCaptureEnabled(captureEnabled);
+    set({ settings });
+  },
+
+  updateShortcut: async (shortcut) => {
+    const settings = await clipboardService.updateShortcut(shortcut);
     set({ settings });
   }
 }));

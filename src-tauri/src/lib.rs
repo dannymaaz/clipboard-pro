@@ -5,7 +5,13 @@ mod infrastructure;
 
 use application::commands;
 use database::sqlite::Database;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::{
+    str::FromStr,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc, RwLock,
+    },
+};
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
@@ -16,6 +22,8 @@ use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut,
 
 pub struct AppState {
     pub db: Database,
+    pub capture_enabled: Arc<AtomicBool>,
+    pub shortcut: Arc<RwLock<Shortcut>>,
 }
 
 pub struct LifecycleState {
@@ -33,9 +41,12 @@ pub fn run() {
         .plugin(
             tauri_plugin_global_shortcut::Builder::new()
                 .with_handler(|app, pressed_shortcut, event| {
-                    let shortcut =
-                        Shortcut::new(Some(Modifiers::CONTROL | Modifiers::ALT), Code::KeyV);
-                    if pressed_shortcut == &shortcut && event.state() == ShortcutState::Pressed {
+                    let shortcut = app.try_state::<AppState>().and_then(|state| {
+                        state.shortcut.read().ok().map(|shortcut| shortcut.clone())
+                    });
+                    if shortcut.as_ref() == Some(pressed_shortcut)
+                        && event.state() == ShortcutState::Pressed
+                    {
                         let _ = show_main_window(app);
                     }
                 })
@@ -45,21 +56,28 @@ pub fn run() {
             app.manage(LifecycleState {
                 is_quitting: AtomicBool::new(false),
             });
-            let shortcut = Shortcut::new(Some(Modifiers::CONTROL | Modifiers::ALT), Code::KeyV);
-            app.global_shortcut().register(shortcut)?;
-
             let database = Database::new(app.handle())?;
+            let settings = database.get_settings()?;
+            let shortcut =
+                Shortcut::from_str(&settings.shortcut).unwrap_or_else(|_| default_shortcut());
+            app.global_shortcut().register(shortcut)?;
+            let capture_enabled = Arc::new(AtomicBool::new(settings.capture_enabled));
+
             infrastructure::clipboard_monitor::spawn_clipboard_monitor(
                 database.clone(),
                 app.handle().clone(),
+                capture_enabled.clone(),
             );
-            let settings = database.get_settings()?;
             if settings.auto_start {
                 let _ = app.autolaunch().enable();
             } else {
                 let _ = app.autolaunch().disable();
             }
-            app.manage(AppState { db: database });
+            app.manage(AppState {
+                db: database,
+                capture_enabled,
+                shortcut: Arc::new(RwLock::new(shortcut)),
+            });
             build_tray(app.handle())?;
             Ok(())
         })
@@ -73,6 +91,7 @@ pub fn run() {
             commands::edit_text_item,
             commands::delete_item,
             commands::get_platform,
+            commands::get_app_version,
             commands::toggle_pin,
             commands::toggle_favorite,
             commands::list_collections,
@@ -84,6 +103,10 @@ pub fn run() {
             commands::get_settings,
             commands::update_history_limit,
             commands::update_auto_start,
+            commands::update_theme,
+            commands::update_accent,
+            commands::update_capture_enabled,
+            commands::update_shortcut,
             commands::hide_window,
             commands::minimize_window,
             commands::toggle_maximize_window,
@@ -99,6 +122,10 @@ pub fn run() {
                 }
             }
         });
+}
+
+fn default_shortcut() -> Shortcut {
+    Shortcut::new(Some(Modifiers::CONTROL | Modifiers::ALT), Code::KeyV)
 }
 
 fn show_main_window(app: &AppHandle) -> tauri::Result<()> {

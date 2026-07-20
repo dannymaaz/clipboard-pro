@@ -11,7 +11,7 @@ import { SearchBar } from "../components/SearchBar";
 import { ViewTabs } from "../components/ViewTabs";
 import { VirtualList } from "../components/VirtualList";
 import { clipboardService, type DesktopPlatform } from "../services/clipboardService";
-import { useSystemTheme } from "../hooks/useSystemTheme";
+import { accentOptions, useSystemTheme } from "../hooks/useSystemTheme";
 import { useClipboardStore } from "../store/clipboardStore";
 import type { AppSettings, ClipboardItem } from "../types/clipboard";
 
@@ -20,6 +20,7 @@ type DialogState =
   | { mode: "edit"; item: ClipboardItem }
   | { mode: "collection" }
   | { mode: "renameCollection"; collectionId: string }
+  | { mode: "delete"; item: ClipboardItem }
   | null;
 
 type UpdateState =
@@ -34,9 +35,12 @@ export function ClipboardWindow() {
   const [showSettings, setShowSettings] = useState(false);
   const [platform, setPlatform] = useState<DesktopPlatform>(detectInitialPlatform);
   const [updateState, setUpdateState] = useState<UpdateState>({ mode: "idle" });
+  const [appVersion, setAppVersion] = useState("...");
+  const [shortcutDraft, setShortcutDraft] = useState("");
+  const [selectedIndex, setSelectedIndex] = useState(0);
   const isMac = platform === "macos";
 
-  useSystemTheme(store.settings?.theme);
+  useSystemTheme(store.settings?.theme, store.settings?.accent);
 
   useEffect(() => {
     void store.load();
@@ -44,6 +48,7 @@ export function ClipboardWindow() {
 
   useEffect(() => {
     void clipboardService.getPlatform().then(setPlatform).catch(() => setPlatform("unknown"));
+    void clipboardService.getAppVersion().then(setAppVersion).catch(() => setAppVersion("0.2.0"));
   }, []);
 
   useEffect(() => {
@@ -100,6 +105,28 @@ export function ClipboardWindow() {
   const selectedCollection = store.collections.find((collection) => collection.id === store.selectedCollectionId);
   const isCollectionRoot = store.activeView === "collections" && !store.selectedCollectionId;
   const listHeight = store.activeView === "collections" ? 365 : 392;
+
+  useEffect(() => {
+    setSelectedIndex((current) => Math.min(current, Math.max(visibleItems.length - 1, 0)));
+  }, [visibleItems.length]);
+
+  useEffect(() => {
+    const onKeyDown = (event: globalThis.KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (showSettings || dialog || updateState.mode !== "idle" || target?.matches("input, textarea, select, button") || !visibleItems.length) return;
+      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+        event.preventDefault();
+        setSelectedIndex((current) => (current + (event.key === "ArrowDown" ? 1 : -1) + visibleItems.length) % visibleItems.length);
+      }
+      if (event.key === "Enter") {
+        event.preventDefault();
+        void store.paste(visibleItems[selectedIndex].id);
+      }
+      if (event.key === "Escape") void clipboardService.hideWindow();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [dialog, selectedIndex, showSettings, store, updateState.mode, visibleItems]);
 
   const dropItemIntoCollection = (event: DragEvent<HTMLElement>, collectionId: string) => {
     const itemId = event.dataTransfer.getData("application/x-clipboard-pro-item");
@@ -166,7 +193,10 @@ export function ClipboardWindow() {
           <div className="min-w-0 flex-1">
             <SearchBar value={store.query} onChange={(value) => void store.search(value)} />
           </div>
-          <button className="mr-2 icon-button" title="Preferencias" type="button" onClick={() => setShowSettings((value) => !value)}>
+          <button className="mr-2 icon-button" title="Preferencias" type="button" onClick={() => {
+            setShortcutDraft(store.settings?.shortcut ?? "Ctrl+Alt+V");
+            setShowSettings((value) => !value);
+          }}>
             <Settings size={16} aria-hidden />
           </button>
         </div>
@@ -222,9 +252,42 @@ export function ClipboardWindow() {
                 />
               </label>
 
+              <label className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs dark:border-slate-800 dark:bg-slate-900/70">
+                <span>
+                  <span className="block font-medium">Tema</span>
+                  <span className="mt-0.5 block text-[11px] text-slate-500 dark:text-slate-400">Usa el sistema o elige una apariencia fija.</span>
+                </span>
+                <select aria-label="Tema" className="h-8 rounded-md border border-slate-200 bg-white px-2 text-slate-900 outline-none dark:border-slate-700 dark:bg-slate-950 dark:text-white" value={store.settings?.theme ?? "system"} onChange={(event) => void store.updateTheme(event.target.value as AppSettings["theme"])}>
+                  <option value="system">Sistema</option>
+                  <option value="light">Claro</option>
+                  <option value="dark">Oscuro</option>
+                </select>
+              </label>
+
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs dark:border-slate-800 dark:bg-slate-900/70">
+                <span className="block font-medium">Color de acento</span>
+                <div className="mt-2 flex gap-2" role="group" aria-label="Color de acento">
+                  {accentOptions.map((accent) => (
+                    <button key={accent} type="button" title={accent} aria-label={`Usar acento ${accent}`} aria-pressed={(store.settings?.accent ?? "blue") === accent} onClick={() => void store.updateAccent(accent)} className={clsx("size-6 rounded-full border-2 transition", (store.settings?.accent ?? "blue") === accent ? "scale-110 border-slate-900 dark:border-white" : "border-transparent")} style={{ backgroundColor: { blue: "#2563eb", violet: "#7c3aed", green: "#16a34a", orange: "#ea580c", rose: "#e11d48" }[accent] }} />
+                  ))}
+                </div>
+              </div>
+
+              <label className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs dark:border-slate-800 dark:bg-slate-900/70">
+                <span>
+                  <span className="block font-medium">Capturar portapapeles</span>
+                  <span className="mt-0.5 block text-[11px] text-slate-500 dark:text-slate-400">Pausa el monitor sin borrar tu historial.</span>
+                </span>
+                <input type="checkbox" className="size-4 accent-blue-600" checked={store.settings?.captureEnabled ?? true} onChange={(event) => void store.updateCaptureEnabled(event.target.checked)} />
+              </label>
+
               <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs dark:border-slate-800 dark:bg-slate-900/70">
                 <span className="block font-medium">Atajo global</span>
-                <span className="mt-1 block text-slate-500 dark:text-slate-400">{store.settings?.shortcut ?? "Ctrl+Alt+V"}</span>
+                <div className="mt-2 flex gap-2">
+                  <input aria-label="Atajo global" className="min-w-0 flex-1 rounded-md border border-slate-200 bg-white px-2 py-1.5 text-slate-900 outline-none dark:border-slate-700 dark:bg-slate-950 dark:text-white" value={shortcutDraft} onChange={(event) => setShortcutDraft(event.target.value)} placeholder="Ctrl+Alt+V" />
+                  <button className="primary-button px-2 py-1 text-[11px]" type="button" onClick={() => void store.updateShortcut(shortcutDraft.trim())}>Guardar</button>
+                </div>
+                <span className="mt-1 block text-[11px] text-slate-500 dark:text-slate-400">Ejemplo: Ctrl+Alt+V. En macOS puedes usar Command+Shift+V.</span>
               </div>
             </div>
           </section>
@@ -288,6 +351,7 @@ export function ClipboardWindow() {
               <ClipboardItemRow
                 key={item.id}
                 item={item}
+                isSelected={visibleItems[selectedIndex]?.id === item.id}
                 collections={store.collections}
                 onCopy={(id) => void store.copy(id)}
                 onPaste={(id) => void store.paste(id)}
@@ -299,7 +363,10 @@ export function ClipboardWindow() {
                 onEdit={(selectedItem) => {
                   if (selectedItem.kind !== "image") setDialog({ mode: "edit", item: selectedItem });
                 }}
-                onDelete={(id) => void store.remove(id)}
+                onDelete={(id) => {
+                  const selectedItem = store.items.find((candidate) => candidate.id === id);
+                  if (selectedItem) setDialog({ mode: "delete", item: selectedItem });
+                }}
               />
             )}
           />
@@ -310,7 +377,7 @@ export function ClipboardWindow() {
         )}
 
         <footer className="absolute bottom-1.5 left-0 right-0 pointer-events-none text-center text-[10px] text-slate-400/80 dark:text-slate-500/80">
-          Powered by Danny Maaz
+          v{appVersion} · Powered by Danny Maaz
         </footer>
 
         {dialog?.mode === "rename" ? (
@@ -363,6 +430,19 @@ export function ClipboardWindow() {
               setDialog(null);
             }}
           />
+        ) : null}
+
+        {dialog?.mode === "delete" ? (
+          <section className="absolute inset-0 z-[100] grid place-items-center bg-slate-950/35 p-4 backdrop-blur-[2px]">
+            <div className="w-full max-w-[300px] rounded-xl border border-slate-200 bg-white p-4 shadow-2xl dark:border-slate-700 dark:bg-slate-900">
+              <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Eliminar elemento</h2>
+              <p className="mt-2 text-xs leading-5 text-slate-600 dark:text-slate-300">¿Eliminar “{dialog.item.title ?? dialog.item.preview}”? Esta acción no se puede deshacer.</p>
+              <div className="mt-4 flex justify-end gap-2">
+                <button className="text-button" type="button" onClick={() => setDialog(null)}>Cancelar</button>
+                <button className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700" type="button" onClick={() => { void store.remove(dialog.item.id); setDialog(null); }}>Eliminar</button>
+              </div>
+            </div>
+          </section>
         ) : null}
 
         {updateState.mode !== "idle" ? (

@@ -56,12 +56,12 @@ CREATE VIRTUAL TABLE IF NOT EXISTS item_search USING fts5(
 
 CREATE TRIGGER IF NOT EXISTS clipboard_items_ai AFTER INSERT ON clipboard_items BEGIN
   INSERT INTO item_search(item_id, title, content, preview)
-  VALUES (new.id, coalesce(new.title, ''), new.content, new.preview);
+  VALUES (new.id, coalesce(new.title, ''), CASE WHEN new.kind = 'image' THEN '' ELSE new.content END, new.preview);
 END;
 
 CREATE TRIGGER IF NOT EXISTS clipboard_items_au AFTER UPDATE ON clipboard_items BEGIN
   UPDATE item_search
-  SET title = coalesce(new.title, ''), content = new.content, preview = new.preview
+  SET title = coalesce(new.title, ''), content = CASE WHEN new.kind = 'image' THEN '' ELSE new.content END, preview = new.preview
   WHERE item_id = new.id;
 END;
 
@@ -73,4 +73,6 @@ INSERT OR IGNORE INTO settings(key, value) VALUES
   ('history_limit', '50'),
   ('shortcut', 'Ctrl+Alt+V'),
   ('theme', 'system'),
-  ('auto_start', 'false');
+  ('accent', 'blue'),
+  ('auto_start', 'false'),
+  ('capture_enabled', 'true');

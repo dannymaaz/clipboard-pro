@@ -6,6 +6,7 @@ import { getItemSubtitle, getItemTitle, itemKindMeta } from "../utils/itemFormat
 
 interface ClipboardItemRowProps {
   item: ClipboardItem;
+  isSelected: boolean;
   collections: Collection[];
   onCopy: (id: string) => void;
   onPaste: (id: string) => void;
@@ -20,6 +21,7 @@ interface ClipboardItemRowProps {
 
 export function ClipboardItemRow({
   item,
+  isSelected,
   collections,
   onCopy,
   onPaste,
@@ -68,7 +70,8 @@ export function ClipboardItemRow({
     <article
       className={clsx(
         "animate-soft-in group relative flex min-h-14 items-center gap-2 border-b border-black/5 px-2 py-1.5 last:border-b-0 dark:border-white/8",
-        isMenuOpen ? "z-[80]" : "z-0"
+        isMenuOpen ? "z-[80]" : "z-0",
+        isSelected ? "bg-accent/10" : null
       )}
     >
       <button
@@ -76,6 +79,7 @@ export function ClipboardItemRow({
         draggable={!isMenuOpen}
         onDragStart={onDragStart}
         onClick={() => onPaste(item.id)}
+        aria-label={`Pegar ${title}`}
         className="relative z-10 flex min-w-0 flex-1 items-center gap-2 overflow-hidden rounded-md px-2 py-1.5 text-left transition hover:bg-black/5 dark:hover:bg-white/8"
       >
         <span

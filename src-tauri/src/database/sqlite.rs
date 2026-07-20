@@ -1,5 +1,9 @@
-use crate::domain::models::{AppSettings, ClipboardItem, ClipboardKind, Collection};
+use crate::domain::models::{
+    AppSettings, ClipboardItem, ClipboardKind, Collection, ImageClipboardContent,
+};
+use base64::{engine::general_purpose, Engine as _};
 use chrono::Utc;
+use image::{DynamicImage, ImageBuffer, ImageEncoder, Rgba};
 use rusqlite::{params, Connection, OptionalExtension};
 use std::fs;
 use std::sync::{Arc, Mutex};
@@ -46,7 +50,7 @@ impl Database {
         let conn = self.conn.lock().map_err(|error| error.to_string())?;
         let mut stmt = conn
             .prepare(
-                "SELECT id, title, content, preview, thumbnail, kind, is_pinned, is_favorite, created_at, updated_at, last_used_at
+                "SELECT id, title, CASE WHEN kind = 'image' THEN '' ELSE content END, preview, thumbnail, kind, is_pinned, is_favorite, created_at, updated_at, last_used_at
                  FROM clipboard_items
                  ORDER BY is_pinned DESC, created_at DESC",
             )
@@ -77,7 +81,7 @@ impl Database {
         let conn = self.conn.lock().map_err(|error| error.to_string())?;
         let mut stmt = conn
             .prepare(
-                "SELECT ci.id, ci.title, ci.content, ci.preview, ci.thumbnail, ci.kind, ci.is_pinned, ci.is_favorite,
+                "SELECT ci.id, ci.title, CASE WHEN ci.kind = 'image' THEN '' ELSE ci.content END, ci.preview, ci.thumbnail, ci.kind, ci.is_pinned, ci.is_favorite,
                         ci.created_at, ci.updated_at, ci.last_used_at
                  FROM item_search s
                  JOIN clipboard_items ci ON ci.id = s.item_id
@@ -311,7 +315,9 @@ impl Database {
             history_limit: self.get_setting_i64_locked(&conn, "history_limit", 50)?,
             shortcut: self.get_setting_locked(&conn, "shortcut", "Ctrl+Alt+V")?,
             theme: self.get_setting_locked(&conn, "theme", "system")?,
+            accent: self.get_setting_locked(&conn, "accent", "blue")?,
             auto_start: self.get_setting_bool_locked(&conn, "auto_start", false)?,
+            capture_enabled: self.get_setting_bool_locked(&conn, "capture_enabled", true)?,
         })
     }
 
@@ -332,15 +338,32 @@ impl Database {
     }
 
     pub fn update_auto_start(&self, auto_start: bool) -> Result<AppSettings, String> {
-        let conn = self.conn.lock().map_err(|error| error.to_string())?;
-        conn.execute(
-            "INSERT INTO settings(key, value) VALUES ('auto_start', ?1)
-             ON CONFLICT(key) DO UPDATE SET value = excluded.value",
-            params![auto_start.to_string()],
-        )
-        .map_err(|error| error.to_string())?;
-        drop(conn);
-        self.get_settings()
+        self.update_setting("auto_start", &auto_start.to_string())
+    }
+
+    pub fn update_theme(&self, theme: &str) -> Result<AppSettings, String> {
+        if !["system", "light", "dark"].contains(&theme) {
+            return Err("Theme must be system, light or dark".into());
+        }
+        self.update_setting("theme", theme)
+    }
+
+    pub fn update_accent(&self, accent: &str) -> Result<AppSettings, String> {
+        if !["blue", "violet", "green", "orange", "rose"].contains(&accent) {
+            return Err("Unsupported accent color".into());
+        }
+        self.update_setting("accent", accent)
+    }
+
+    pub fn update_shortcut(&self, shortcut: &str) -> Result<AppSettings, String> {
+        if shortcut.trim().is_empty() || shortcut.len() > 80 {
+            return Err("Shortcut must not be empty".into());
+        }
+        self.update_setting("shortcut", shortcut)
+    }
+
+    pub fn update_capture_enabled(&self, capture_enabled: bool) -> Result<AppSettings, String> {
+        self.update_setting("capture_enabled", &capture_enabled.to_string())
     }
 
     fn fetch_item_locked(&self, conn: &Connection, id: &str) -> Result<ClipboardItem, String> {
@@ -455,6 +478,18 @@ impl Database {
         .map(|value| value.unwrap_or_else(|| fallback.to_string()))
     }
 
+    fn update_setting(&self, key: &str, value: &str) -> Result<AppSettings, String> {
+        let conn = self.conn.lock().map_err(|error| error.to_string())?;
+        conn.execute(
+            "INSERT INTO settings(key, value) VALUES (?1, ?2)
+             ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+            params![key, value],
+        )
+        .map_err(|error| error.to_string())?;
+        drop(conn);
+        self.get_settings()
+    }
+
     fn get_setting_i64_locked(
         &self,
         conn: &Connection,
@@ -502,11 +537,98 @@ fn migrate(conn: &Connection) -> Result<(), String> {
         [],
     )
     .map_err(|error| error.to_string())?;
+    conn.execute_batch(
+        "DROP TRIGGER IF EXISTS clipboard_items_ai;
+         DROP TRIGGER IF EXISTS clipboard_items_au;
+         CREATE TRIGGER clipboard_items_ai AFTER INSERT ON clipboard_items BEGIN
+           INSERT INTO item_search(item_id, title, content, preview)
+           VALUES (new.id, coalesce(new.title, ''), CASE WHEN new.kind = 'image' THEN '' ELSE new.content END, new.preview);
+         END;
+         CREATE TRIGGER clipboard_items_au AFTER UPDATE ON clipboard_items BEGIN
+           UPDATE item_search
+           SET title = coalesce(new.title, ''), content = CASE WHEN new.kind = 'image' THEN '' ELSE new.content END, preview = new.preview
+           WHERE item_id = new.id;
+         END;",
+    )
+    .map_err(|error| error.to_string())?;
+    migrate_legacy_images(conn)?;
+    conn.execute("DELETE FROM item_search", [])
+        .map_err(|error| error.to_string())?;
+    conn.execute(
+        "INSERT INTO item_search(item_id, title, content, preview)
+         SELECT id, coalesce(title, ''), CASE WHEN kind = 'image' THEN '' ELSE content END, preview FROM clipboard_items",
+        [],
+    )
+    .map_err(|error| error.to_string())?;
     conn.execute(
         "INSERT OR IGNORE INTO settings(key, value) VALUES ('auto_start', 'false')",
         [],
     )
     .map_err(|error| error.to_string())?;
+    conn.execute(
+        "INSERT OR IGNORE INTO settings(key, value) VALUES ('accent', 'blue'), ('capture_enabled', 'true')",
+        [],
+    )
+    .map_err(|error| error.to_string())?;
+    Ok(())
+}
+
+fn migrate_legacy_images(conn: &Connection) -> Result<(), String> {
+    let mut statement = conn
+        .prepare("SELECT id, content FROM clipboard_items WHERE kind = 'image'")
+        .map_err(|error| error.to_string())?;
+    let images = statement
+        .query_map([], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+        })
+        .map_err(|error| error.to_string())?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|error| error.to_string())?;
+
+    for (id, content) in images {
+        let Ok(image) = serde_json::from_str::<ImageClipboardContent>(&content) else {
+            continue;
+        };
+        if image.png_base64.is_some() {
+            continue;
+        }
+        let Some(rgba_base64) = image.rgba_base64 else {
+            continue;
+        };
+        let Ok(rgba) = general_purpose::STANDARD.decode(rgba_base64) else {
+            continue;
+        };
+        let Some(raw) =
+            ImageBuffer::<Rgba<u8>, _>::from_raw(image.width as u32, image.height as u32, rgba)
+        else {
+            continue;
+        };
+        let image = DynamicImage::ImageRgba8(raw).to_rgba8();
+        let mut png = Vec::new();
+        if image::codecs::png::PngEncoder::new(&mut png)
+            .write_image(
+                image.as_raw(),
+                image.width(),
+                image.height(),
+                image::ExtendedColorType::Rgba8,
+            )
+            .is_err()
+        {
+            continue;
+        }
+        let migrated = ImageClipboardContent {
+            width: image.width() as usize,
+            height: image.height() as usize,
+            png_base64: Some(general_purpose::STANDARD.encode(png)),
+            rgba_base64: None,
+        };
+        let content = serde_json::to_string(&migrated).map_err(|error| error.to_string())?;
+        conn.execute(
+            "UPDATE clipboard_items SET content = ?1, updated_at = ?2 WHERE id = ?3",
+            params![content, now(), id],
+        )
+        .map_err(|error| error.to_string())?;
+    }
     Ok(())
 }
 

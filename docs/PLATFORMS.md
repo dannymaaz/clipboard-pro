@@ -121,6 +121,6 @@ El workflow `.github/workflows/release.yml` compila:
 Publicar:
 
 ```bash
-git tag v0.1.10
-git push origin v0.1.10
+git tag v0.2.0
+git push origin v0.2.0
 ```

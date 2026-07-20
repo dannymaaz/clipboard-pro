@@ -10,6 +10,7 @@ export function SearchBar({ value, onChange }: SearchBarProps) {
     <label className="flex h-11 items-center gap-2 px-3">
       <Search size={17} className="text-slate-500 dark:text-slate-400" aria-hidden />
       <input
+        aria-label="Buscar en el portapapeles"
         autoFocus
         value={value}
         onChange={(event) => onChange(event.target.value)}
