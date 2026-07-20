@@ -47,16 +47,24 @@ impl Database {
     }
 
     pub fn list_items(&self) -> Result<Vec<ClipboardItem>, String> {
+        self.list_items_page(0, 100)
+    }
+
+    pub fn list_items_page(&self, offset: i64, limit: i64) -> Result<Vec<ClipboardItem>, String> {
+        if offset < 0 || !(1..=100).contains(&limit) {
+            return Err("Invalid history page".into());
+        }
         let conn = self.conn.lock().map_err(|error| error.to_string())?;
         let mut stmt = conn
             .prepare(
                 "SELECT id, title, CASE WHEN kind = 'image' THEN '' ELSE content END, preview, thumbnail, kind, is_pinned, is_favorite, created_at, updated_at, last_used_at
                  FROM clipboard_items
-                 ORDER BY is_pinned DESC, created_at DESC",
+                 ORDER BY is_pinned DESC, created_at DESC
+                 LIMIT ?1 OFFSET ?2",
             )
             .map_err(|error| error.to_string())?;
         let raw_items = stmt
-            .query_map([], map_raw_item)
+            .query_map(params![limit, offset], map_raw_item)
             .map_err(|error| error.to_string())?
             .collect::<Result<Vec<_>, _>>()
             .map_err(|error| error.to_string())?;
@@ -626,6 +634,7 @@ fn migrate_legacy_images(conn: &Connection) -> Result<(), String> {
             height: image.height() as usize,
             png_base64: Some(general_purpose::STANDARD.encode(png)),
             rgba_base64: None,
+            file_path: None,
         };
         let content = serde_json::to_string(&migrated).map_err(|error| error.to_string())?;
         conn.execute(

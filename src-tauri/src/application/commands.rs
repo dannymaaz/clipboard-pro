@@ -22,6 +22,15 @@ pub fn list_items(state: State<'_, AppState>) -> Result<Vec<ClipboardItem>, Stri
 }
 
 #[tauri::command]
+pub fn list_items_page(
+    state: State<'_, AppState>,
+    offset: i64,
+    limit: i64,
+) -> Result<Vec<ClipboardItem>, String> {
+    state.db.list_items_page(offset, limit)
+}
+
+#[tauri::command]
 pub fn search_items(
     state: State<'_, AppState>,
     query: String,
@@ -46,7 +55,18 @@ pub fn copy_item(state: State<'_, AppState>, id: String) -> Result<(), String> {
         ClipboardKind::Image => {
             let image: ImageClipboardContent =
                 serde_json::from_str(&item.content).map_err(|error| error.to_string())?;
-            let (width, height, bytes) = if let Some(png_base64) = image.png_base64 {
+            let (width, height, bytes) = if let Some(file_path) = image.file_path {
+                let decoded = ImageReader::open(file_path)
+                    .map_err(|error| error.to_string())?
+                    .decode()
+                    .map_err(|error| error.to_string())?
+                    .to_rgba8();
+                (
+                    decoded.width() as usize,
+                    decoded.height() as usize,
+                    decoded.into_raw(),
+                )
+            } else if let Some(png_base64) = image.png_base64 {
                 let png = general_purpose::STANDARD
                     .decode(png_base64)
                     .map_err(|error| error.to_string())?;

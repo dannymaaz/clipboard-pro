@@ -13,6 +13,8 @@ use tauri::{AppHandle, Manager};
 use uuid::Uuid;
 use xcap::Monitor;
 
+const SCREENSHOT_FALLBACK_PIXELS: u64 = 1_000_000;
+
 pub fn capture_primary_screen(
     app: &AppHandle,
     db: &Database,
@@ -53,13 +55,14 @@ fn persist_capture(
         Uuid::new_v4()
     ));
     image.save(&file_path).map_err(|error| error.to_string())?;
-    let png = encode_png(&image)?;
     let thumbnail = thumbnail(&image)?;
+    let fallback = storage_fallback(&image)?;
     let content = serde_json::to_string(&ImageClipboardContent {
         width: image.width() as usize,
         height: image.height() as usize,
-        png_base64: Some(general_purpose::STANDARD.encode(&png)),
+        png_base64: Some(general_purpose::STANDARD.encode(fallback)),
         rgba_base64: None,
+        file_path: Some(file_path.display().to_string()),
     })
     .map_err(|error| error.to_string())?;
     let fingerprint = super::clipboard_monitor::image_fingerprint(
@@ -102,6 +105,21 @@ fn encode_png(image: &RgbaImage) -> Result<Vec<u8>, String> {
         )
         .map_err(|error| error.to_string())?;
     Ok(png)
+}
+
+fn storage_fallback(image: &RgbaImage) -> Result<Vec<u8>, String> {
+    let pixel_count = u64::from(image.width()) * u64::from(image.height());
+    let image = if pixel_count > SCREENSHOT_FALLBACK_PIXELS {
+        let scale = (SCREENSHOT_FALLBACK_PIXELS as f64 / pixel_count as f64).sqrt();
+        let width = ((image.width() as f64 * scale).round() as u32).max(1);
+        let height = ((image.height() as f64 * scale).round() as u32).max(1);
+        image::DynamicImage::ImageRgba8(image.clone())
+            .resize(width, height, FilterType::Triangle)
+            .to_rgba8()
+    } else {
+        image.clone()
+    };
+    encode_png(&image)
 }
 
 fn thumbnail(image: &RgbaImage) -> Result<String, String> {

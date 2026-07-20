@@ -81,4 +81,6 @@ pub struct ImageClipboardContent {
     pub png_base64: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub rgba_base64: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub file_path: Option<String>,
 }

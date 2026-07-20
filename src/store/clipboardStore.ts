@@ -10,7 +10,10 @@ interface ClipboardState {
   activeView: ClipboardView;
   selectedCollectionId: string | null;
   isLoading: boolean;
+  isLoadingMore: boolean;
+  hasMore: boolean;
   load: () => Promise<void>;
+  loadMore: () => Promise<void>;
   search: (query: string) => Promise<void>;
   setView: (view: ClipboardView) => void;
   setCollection: (id: string | null) => void;
@@ -37,6 +40,7 @@ interface ClipboardState {
 const upsertItem = (items: ClipboardItem[], nextItem: ClipboardItem) =>
   items.map((item) => (item.id === nextItem.id ? nextItem : item));
 let searchRequest = 0;
+const HISTORY_PAGE_SIZE = 100;
 
 export const useClipboardStore = create<ClipboardState>((set, get) => ({
   items: [],
@@ -46,16 +50,32 @@ export const useClipboardStore = create<ClipboardState>((set, get) => ({
   activeView: "history",
   selectedCollectionId: null,
   isLoading: false,
+  isLoadingMore: false,
+  hasMore: false,
 
   load: async () => {
     set({ isLoading: true });
     const query = get().query;
     const [items, collections, settings] = await Promise.all([
-      query.trim() ? clipboardService.searchItems(query) : clipboardService.listItems(),
+      query.trim() ? clipboardService.searchItems(query) : clipboardService.listItemsPage(0, HISTORY_PAGE_SIZE),
       clipboardService.listCollections(),
       clipboardService.getSettings()
     ]);
-    set({ items, collections, settings, isLoading: false });
+    set({ items, collections, settings, hasMore: !query.trim() && items.length === HISTORY_PAGE_SIZE, isLoading: false });
+  },
+
+  loadMore: async () => {
+    const { hasMore, isLoadingMore, items, query } = get();
+    if (!hasMore || isLoadingMore || query.trim()) return;
+    set({ isLoadingMore: true });
+    try {
+      const next = await clipboardService.listItemsPage(items.length, HISTORY_PAGE_SIZE);
+      const existing = new Set(items.map((item) => item.id));
+      const unique = next.filter((item) => !existing.has(item.id));
+      set({ items: [...items, ...unique], hasMore: next.length === HISTORY_PAGE_SIZE });
+    } finally {
+      set({ isLoadingMore: false });
+    }
   },
 
   search: async (query) => {
@@ -63,8 +83,8 @@ export const useClipboardStore = create<ClipboardState>((set, get) => ({
     set({ query });
     const items = query.trim()
       ? await clipboardService.searchItems(query)
-      : await clipboardService.listItems();
-    if (request === searchRequest) set({ items });
+      : await clipboardService.listItemsPage(0, HISTORY_PAGE_SIZE);
+    if (request === searchRequest) set({ items, hasMore: !query.trim() && items.length === HISTORY_PAGE_SIZE });
   },
 
   setView: (activeView) => set({ activeView, selectedCollectionId: null }),
@@ -144,8 +164,8 @@ export const useClipboardStore = create<ClipboardState>((set, get) => ({
 
   updateHistoryLimit: async (historyLimit) => {
     const settings = await clipboardService.updateHistoryLimit(historyLimit);
-    const items = await clipboardService.listItems();
-    set({ settings, items });
+    const items = await clipboardService.listItemsPage(0, HISTORY_PAGE_SIZE);
+    set({ settings, items, hasMore: items.length === HISTORY_PAGE_SIZE });
   },
 
   updateAutoStart: async (autoStart) => {

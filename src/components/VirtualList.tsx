@@ -6,10 +6,11 @@ interface VirtualListProps<T> {
   itemHeight: number;
   height: number;
   overscan?: number;
+  onNearEnd?: () => void;
   renderItem: (item: T, index: number) => ReactNode;
 }
 
-export function VirtualList<T>({ items, itemHeight, height, overscan = 6, renderItem }: VirtualListProps<T>) {
+export function VirtualList<T>({ items, itemHeight, height, overscan = 6, onNearEnd, renderItem }: VirtualListProps<T>) {
   const [scrollTop, setScrollTop] = useState(0);
   const totalHeight = items.length * itemHeight;
   const range = useMemo(() => {
@@ -23,7 +24,11 @@ export function VirtualList<T>({ items, itemHeight, height, overscan = 6, render
     <div
       className="custom-scrollbar overflow-y-auto"
       style={{ height }}
-      onScroll={(event) => setScrollTop(event.currentTarget.scrollTop)}
+      onScroll={(event) => {
+        const { clientHeight, scrollHeight, scrollTop } = event.currentTarget;
+        setScrollTop(scrollTop);
+        if (scrollTop + clientHeight >= scrollHeight - itemHeight * 2) onNearEnd?.();
+      }}
     >
       <div style={{ height: totalHeight, position: "relative" }}>
         <div style={{ transform: `translateY(${range.start * itemHeight}px)` }}>
