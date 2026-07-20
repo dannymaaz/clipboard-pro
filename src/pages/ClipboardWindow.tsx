@@ -351,6 +351,7 @@ export function ClipboardWindow() {
             items={visibleItems}
             itemHeight={58}
             height={listHeight}
+            onNearEnd={() => void store.loadMore()}
             renderItem={(item) => (
               <ClipboardItemRow
                 key={item.id}

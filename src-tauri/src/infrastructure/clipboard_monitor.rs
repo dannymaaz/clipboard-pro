@@ -14,7 +14,9 @@ use std::{thread, time::Duration};
 use tauri::{AppHandle, Emitter};
 
 pub const CLIPBOARD_CHANGED_EVENT: &str = "clipboard-pro://items-changed";
-const POLL_INTERVAL: Duration = Duration::from_millis(900);
+const BASE_POLL_INTERVAL: Duration = Duration::from_millis(900);
+const MAX_IMAGE_POLL_INTERVAL: Duration = Duration::from_secs(3);
+const LARGE_IMAGE_BYTES: usize = 8 * 1024 * 1024;
 const MAX_IMAGE_PIXELS: u64 = 6_000_000;
 
 pub fn spawn_clipboard_monitor(
@@ -28,10 +30,11 @@ pub fn spawn_clipboard_monitor(
         .spawn(move || {
             let mut last_seen = String::new();
             let mut last_image_seen = String::new();
+            let mut poll_interval = BASE_POLL_INTERVAL;
 
             loop {
                 if !capture_enabled.load(Ordering::Relaxed) {
-                    thread::sleep(POLL_INTERVAL);
+                    thread::sleep(BASE_POLL_INTERVAL);
                     continue;
                 }
 
@@ -43,6 +46,7 @@ pub fn spawn_clipboard_monitor(
                             let _ = app.emit(CLIPBOARD_CHANGED_EVENT, ());
                             last_seen = text;
                         }
+                        poll_interval = BASE_POLL_INTERVAL;
                     } else if let Ok(image) = clipboard.get_image() {
                         let fingerprint =
                             image_fingerprint(image.width, image.height, image.bytes.as_ref());
@@ -79,11 +83,16 @@ pub fn spawn_clipboard_monitor(
                             }
                             let _ = app.emit(CLIPBOARD_CHANGED_EVENT, ());
                             last_image_seen = fingerprint;
+                            poll_interval = BASE_POLL_INTERVAL;
+                        } else if image.bytes.len() >= LARGE_IMAGE_BYTES {
+                            poll_interval = (poll_interval * 2).min(MAX_IMAGE_POLL_INTERVAL);
+                        } else {
+                            poll_interval = BASE_POLL_INTERVAL;
                         }
                     }
                 }
 
-                thread::sleep(POLL_INTERVAL);
+                thread::sleep(poll_interval);
             }
         });
 }
@@ -106,6 +115,7 @@ fn encode_image_item(width: usize, height: usize, rgba: &[u8]) -> Result<(String
         height,
         png_base64: Some(general_purpose::STANDARD.encode(png)),
         rgba_base64: None,
+        file_path: None,
     };
     let thumbnail = create_thumbnail_data_url(&image)?;
     let content = serde_json::to_string(&content).map_err(|error| error.to_string())?;

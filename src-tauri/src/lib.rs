@@ -87,6 +87,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::list_items,
+            commands::list_items_page,
             commands::search_items,
             commands::create_text_item,
             commands::copy_item,

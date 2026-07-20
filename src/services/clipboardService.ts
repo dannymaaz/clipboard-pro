@@ -78,7 +78,7 @@ let mockSettings: AppSettings = {
 export type DesktopPlatform = "windows" | "macos" | "linux" | "unknown";
 
 const mockService = {
-  listItems: async () => mockItems,
+  listItems: async (offset = 0, limit = 100) => mockItems.slice(offset, offset + limit),
   searchItems: async (query: string) => {
     const normalized = query.toLowerCase();
     return mockItems.filter((item) =>
@@ -183,6 +183,10 @@ function updateMockItem(id: string, patch: Partial<ClipboardItem>) {
 
 export const clipboardService = {
   listItems: () => (isTauri ? invoke<ClipboardItem[]>("list_items") : mockService.listItems()),
+  listItemsPage: (offset: number, limit: number) =>
+    isTauri
+      ? invoke<ClipboardItem[]>("list_items_page", { offset, limit })
+      : mockService.listItems(offset, limit),
   searchItems: (query: string) => (isTauri ? invoke<ClipboardItem[]>("search_items", { query }) : mockService.searchItems(query)),
   createTextItem: (content: string) => (isTauri ? invoke<ClipboardItem>("create_text_item", { content }) : mockService.createTextItem(content)),
   copyItem: (id: string) => (isTauri ? invoke<void>("copy_item", { id }) : mockService.copyItem(id)),
