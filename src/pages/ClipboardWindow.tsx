@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type DragEvent, type MouseEvent } from "react";
-import { ChevronLeft, Download, Minus, Pencil, Plus, RefreshCw, Settings, Trash2, X } from "lucide-react";
+import { Camera, ChevronLeft, Download, Minus, Pencil, Plus, RefreshCw, Settings, Trash2, X } from "lucide-react";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { relaunch } from "@tauri-apps/plugin-process";
@@ -8,10 +8,11 @@ import clsx from "clsx";
 import { ClipboardItemRow } from "../components/ClipboardItemRow";
 import { InlineDialog } from "../components/InlineDialog";
 import { SearchBar } from "../components/SearchBar";
+import { ShortcutRecorder } from "../components/ShortcutRecorder";
 import { ViewTabs } from "../components/ViewTabs";
 import { VirtualList } from "../components/VirtualList";
 import { clipboardService, type DesktopPlatform } from "../services/clipboardService";
-import { accentOptions, useSystemTheme } from "../hooks/useSystemTheme";
+import { accentOptions, accentRgb, useSystemTheme } from "../hooks/useSystemTheme";
 import { useClipboardStore } from "../store/clipboardStore";
 import type { AppSettings, ClipboardItem } from "../types/clipboard";
 
@@ -36,8 +37,8 @@ export function ClipboardWindow() {
   const [platform, setPlatform] = useState<DesktopPlatform>(detectInitialPlatform);
   const [updateState, setUpdateState] = useState<UpdateState>({ mode: "idle" });
   const [appVersion, setAppVersion] = useState("...");
-  const [shortcutDraft, setShortcutDraft] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [captureMessage, setCaptureMessage] = useState<string | null>(null);
   const isMac = platform === "macos";
 
   useSystemTheme(store.settings?.theme, store.settings?.accent);
@@ -193,10 +194,7 @@ export function ClipboardWindow() {
           <div className="min-w-0 flex-1">
             <SearchBar value={store.query} onChange={(value) => void store.search(value)} />
           </div>
-          <button className="mr-2 icon-button" title="Preferencias" type="button" onClick={() => {
-            setShortcutDraft(store.settings?.shortcut ?? "Ctrl+Alt+V");
-            setShowSettings((value) => !value);
-          }}>
+          <button className="mr-2 icon-button" title="Preferencias" type="button" onClick={() => setShowSettings((value) => !value)}>
             <Settings size={16} aria-hidden />
           </button>
         </div>
@@ -268,7 +266,7 @@ export function ClipboardWindow() {
                 <span className="block font-medium">Color de acento</span>
                 <div className="mt-2 flex gap-2" role="group" aria-label="Color de acento">
                   {accentOptions.map((accent) => (
-                    <button key={accent} type="button" title={accent} aria-label={`Usar acento ${accent}`} aria-pressed={(store.settings?.accent ?? "blue") === accent} onClick={() => void store.updateAccent(accent)} className={clsx("size-6 rounded-full border-2 transition", (store.settings?.accent ?? "blue") === accent ? "scale-110 border-slate-900 dark:border-white" : "border-transparent")} style={{ backgroundColor: { blue: "#2563eb", violet: "#7c3aed", green: "#16a34a", orange: "#ea580c", rose: "#e11d48" }[accent] }} />
+                    <button key={accent} type="button" title={accent} aria-label={`Usar acento ${accent}`} aria-pressed={(store.settings?.accent ?? "blue") === accent} onClick={() => void store.updateAccent(accent)} className={clsx("size-6 rounded-full border-2 transition", (store.settings?.accent ?? "blue") === accent ? "scale-110 border-slate-900 dark:border-white" : "border-transparent")} style={{ backgroundColor: `rgb(${accentRgb[accent]})` }} />
                   ))}
                 </div>
               </div>
@@ -281,13 +279,19 @@ export function ClipboardWindow() {
                 <input type="checkbox" className="size-4 accent-blue-600" checked={store.settings?.captureEnabled ?? true} onChange={(event) => void store.updateCaptureEnabled(event.target.checked)} />
               </label>
 
-              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs dark:border-slate-800 dark:bg-slate-900/70">
-                <span className="block font-medium">Atajo global</span>
-                <div className="mt-2 flex gap-2">
-                  <input aria-label="Atajo global" className="min-w-0 flex-1 rounded-md border border-slate-200 bg-white px-2 py-1.5 text-slate-900 outline-none dark:border-slate-700 dark:bg-slate-950 dark:text-white" value={shortcutDraft} onChange={(event) => setShortcutDraft(event.target.value)} placeholder="Ctrl+Alt+V" />
-                  <button className="primary-button px-2 py-1 text-[11px]" type="button" onClick={() => void store.updateShortcut(shortcutDraft.trim())}>Guardar</button>
-                </div>
-                <span className="mt-1 block text-[11px] text-slate-500 dark:text-slate-400">Ejemplo: Ctrl+Alt+V. En macOS puedes usar Command+Shift+V.</span>
+              <ShortcutRecorder
+                label="Abrir Clipboard Pro"
+                platform={platform}
+                value={store.settings?.shortcut ?? (isMac ? "Command+Alt+V" : "Ctrl+Alt+V")}
+                defaultShortcut={isMac ? "Command+Alt+V" : "Ctrl+Alt+V"}
+                onSave={(shortcut) => store.updateShortcut(shortcut)}
+              />
+
+              <div className="theme-surface rounded-xl p-3 text-xs">
+                <span className="font-semibold">Captura de pantalla</span>
+                <p className="mt-1 text-[11px] text-theme-muted">Al continuar, Clipboard Pro puede solicitar permiso del sistema y creará la carpeta de capturas en Imágenes. Podrás eliminar las imágenes cuando quieras.</p>
+                <button className="primary-button mt-3 flex h-8 items-center gap-1 px-3 text-[11px]" type="button" onClick={() => void clipboardService.takeScreenshot().then(() => { setCaptureMessage("Captura copiada al portapapeles, guardada e incluida en el historial."); void store.load(); }).catch((error) => setCaptureMessage(error instanceof Error ? error.message : "No se pudo capturar la pantalla."))}><Camera size={14} /> Capturar pantalla</button>
+                {captureMessage ? <p className="mt-2 text-[11px] text-theme-muted" role="status">{captureMessage}</p> : null}
               </div>
             </div>
           </section>

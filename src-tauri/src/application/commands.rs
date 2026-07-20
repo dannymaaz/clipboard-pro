@@ -2,6 +2,7 @@ use crate::domain::models::{
     AppSettings, ClipboardItem, ClipboardKind, Collection, ImageClipboardContent,
 };
 use crate::infrastructure::clipboard_monitor::CLIPBOARD_CHANGED_EVENT;
+use crate::infrastructure::screen_capture;
 use crate::{AppState, LifecycleState};
 use arboard::{Clipboard, ImageData};
 use base64::{engine::general_purpose, Engine as _};
@@ -173,6 +174,25 @@ pub fn get_platform() -> String {
 #[tauri::command]
 pub fn get_app_version() -> String {
     env!("CARGO_PKG_VERSION").to_string()
+}
+
+#[tauri::command]
+pub fn take_screenshot(
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> Result<ClipboardItem, String> {
+    let item =
+        screen_capture::capture_primary_screen(&app, &state.db, &state.skipped_capture_image)?;
+    app.emit(CLIPBOARD_CHANGED_EVENT, ())
+        .map_err(|error| error.to_string())?;
+    Ok(item)
+}
+
+#[tauri::command]
+pub fn get_screenshot_directory(app: AppHandle) -> Result<String, String> {
+    Ok(screen_capture::screenshot_directory(&app)?
+        .display()
+        .to_string())
 }
 
 #[tauri::command]

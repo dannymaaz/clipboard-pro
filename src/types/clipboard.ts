@@ -29,7 +29,7 @@ export interface AppSettings {
   historyLimit: 50 | 100 | 250 | 500;
   shortcut: string;
   theme: "system" | "light" | "dark";
-  accent: "blue" | "violet" | "green" | "orange" | "rose";
+  accent: "blue" | "indigo" | "violet" | "fuchsia" | "rose" | "red" | "orange" | "amber" | "green" | "emerald" | "teal" | "cyan";
   captureEnabled: boolean;
   autoStart: boolean;
 }

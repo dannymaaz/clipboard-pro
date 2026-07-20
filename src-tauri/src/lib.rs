@@ -9,7 +9,7 @@ use std::{
     str::FromStr,
     sync::{
         atomic::{AtomicBool, Ordering},
-        Arc, RwLock,
+        Arc, Mutex, RwLock,
     },
 };
 use tauri::{
@@ -23,6 +23,7 @@ use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut,
 pub struct AppState {
     pub db: Database,
     pub capture_enabled: Arc<AtomicBool>,
+    pub skipped_capture_image: Arc<Mutex<Option<String>>>,
     pub shortcut: Arc<RwLock<Shortcut>>,
 }
 
@@ -62,11 +63,13 @@ pub fn run() {
                 Shortcut::from_str(&settings.shortcut).unwrap_or_else(|_| default_shortcut());
             app.global_shortcut().register(shortcut)?;
             let capture_enabled = Arc::new(AtomicBool::new(settings.capture_enabled));
+            let skipped_capture_image = Arc::new(Mutex::new(None));
 
             infrastructure::clipboard_monitor::spawn_clipboard_monitor(
                 database.clone(),
                 app.handle().clone(),
                 capture_enabled.clone(),
+                skipped_capture_image.clone(),
             );
             if settings.auto_start {
                 let _ = app.autolaunch().enable();
@@ -76,6 +79,7 @@ pub fn run() {
             app.manage(AppState {
                 db: database,
                 capture_enabled,
+                skipped_capture_image,
                 shortcut: Arc::new(RwLock::new(shortcut)),
             });
             build_tray(app.handle())?;
@@ -92,6 +96,8 @@ pub fn run() {
             commands::delete_item,
             commands::get_platform,
             commands::get_app_version,
+            commands::take_screenshot,
+            commands::get_screenshot_directory,
             commands::toggle_pin,
             commands::toggle_favorite,
             commands::list_collections,

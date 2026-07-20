@@ -4,6 +4,11 @@
 
 :root {
   --accent-rgb: 37 99 235;
+  --accent-strong-rgb: 37 99 235;
+  --theme-text: 15 23 42;
+  --theme-muted: 71 85 105;
+  --theme-surface: 255 255 255;
+  --theme-elevated: 248 250 252;
   color-scheme: light dark;
   font-family:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -35,13 +40,13 @@ textarea {
     overflow: hidden;
     background:
       radial-gradient(circle at top left, rgb(var(--accent-rgb) / 0.18), transparent 34%),
-      linear-gradient(135deg, rgb(248 250 252 / 0.45), rgb(226 232 240 / 0.28));
+      linear-gradient(135deg, rgb(var(--accent-rgb) / 0.14), rgb(255 255 255 / 0.38));
   }
 
   .dark .window-shell {
     background:
       radial-gradient(circle at top left, rgb(var(--accent-rgb) / 0.16), transparent 34%),
-      linear-gradient(135deg, rgb(2 6 23 / 0.55), rgb(15 23 42 / 0.38));
+      linear-gradient(135deg, rgb(2 6 23 / 0.6), rgb(var(--accent-rgb) / 0.16));
   }
 
   .app-panel {
@@ -52,14 +57,14 @@ textarea {
     user-select: none;
     border: 1px solid rgb(255 255 255 / 0.35);
     border-radius: 12px;
-    background: rgb(255 255 255 / 0.72);
-    box-shadow: 0 24px 70px rgb(15 23 42 / 0.2);
+    background: linear-gradient(145deg, rgb(255 255 255 / 0.78), rgb(var(--accent-rgb) / 0.09));
+    box-shadow: 0 24px 70px rgb(var(--accent-rgb) / 0.18);
     backdrop-filter: blur(24px);
   }
 
   .dark .app-panel {
     border-color: rgb(255 255 255 / 0.12);
-    background: rgb(2 6 23 / 0.78);
+    background: linear-gradient(145deg, rgb(2 6 23 / 0.82), rgb(var(--accent-rgb) / 0.2));
   }
 
   .icon-button {
@@ -165,7 +170,7 @@ textarea {
   }
 
   .primary-button {
-    background: rgb(var(--accent-rgb));
+    background: linear-gradient(135deg, rgb(var(--accent-rgb)), rgb(var(--accent-strong-rgb) / 0.82));
     color: white;
   }
 
@@ -193,6 +198,50 @@ textarea {
   .animate-soft-in {
     animation: soft-in 120ms ease-out both;
   }
+
+  .theme-surface {
+    border: 1px solid rgb(var(--accent-rgb) / 0.2);
+    background: rgb(var(--accent-rgb) / 0.07);
+  }
+
+  .text-theme-muted {
+    color: rgb(var(--theme-muted));
+  }
+
+  .dark .text-theme-muted {
+    color: rgb(203 213 225 / 0.78);
+  }
+
+  .shortcut-slot {
+    min-width: 0;
+    height: 34px;
+    border: 1px solid rgb(var(--accent-rgb) / 0.3);
+    border-radius: 8px;
+    padding: 0 6px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: rgb(var(--theme-text));
+    background: rgb(255 255 255 / 0.56);
+    transition: border-color 120ms ease, background-color 120ms ease, transform 120ms ease;
+  }
+
+  .dark .shortcut-slot {
+    color: white;
+    background: rgb(2 6 23 / 0.42);
+  }
+
+  .shortcut-slot:hover,
+  .shortcut-slot:focus-visible {
+    border-color: rgb(var(--accent-rgb));
+    outline: none;
+  }
+
+  .shortcut-slot-recording {
+    color: white;
+    background: rgb(var(--accent-rgb));
+    animation: shortcut-pulse 900ms ease-in-out infinite;
+  }
 }
 
 @keyframes soft-in {
@@ -205,6 +254,10 @@ textarea {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+@keyframes shortcut-pulse {
+  50% { opacity: 0.72; }
 }
 
 .custom-scrollbar {
