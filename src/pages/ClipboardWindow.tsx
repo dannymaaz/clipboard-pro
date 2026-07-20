@@ -49,7 +49,7 @@ export function ClipboardWindow() {
 
   useEffect(() => {
     void clipboardService.getPlatform().then(setPlatform).catch(() => setPlatform("unknown"));
-    void clipboardService.getAppVersion().then(setAppVersion).catch(() => setAppVersion("0.2.0"));
+    void clipboardService.getAppVersion().then(setAppVersion).catch(() => setAppVersion("0.2.1"));
   }, []);
 
   useEffect(() => {

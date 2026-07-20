@@ -116,11 +116,11 @@ El workflow `.github/workflows/release.yml` compila:
 - Windows en `windows-latest`.
 - macOS Intel en `macos-15-intel`.
 - macOS Apple Silicon en `macos-latest`.
-- Linux en `ubuntu-22.04`.
+- Linux en `ubuntu-24.04`.
 
 Publicar:
 
 ```bash
-git tag v0.2.0
-git push origin v0.2.0
+git tag v0.2.1
+git push origin v0.2.1
 ```

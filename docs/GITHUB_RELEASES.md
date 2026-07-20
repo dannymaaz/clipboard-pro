@@ -30,8 +30,8 @@ El repositorio publico del proyecto es `dannymaaz/clipboard-pro`.
 Antes de publicar la primera version con actualizacion automatica, configura el secreto de GitHub `TAURI_SIGNING_PRIVATE_KEY`. Esta clave firma cada actualizacion; no debe guardarse en el repositorio ni compartirse.
 
 ```bash
-git tag v0.2.0
-git push origin v0.2.0
+git tag v0.2.1
+git push origin v0.2.1
 ```
 
 GitHub ejecutara `.github/workflows/release.yml` y creara una release publica con artefactos para:
