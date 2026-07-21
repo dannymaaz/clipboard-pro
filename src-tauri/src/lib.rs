@@ -141,6 +141,7 @@ pub fn run() {
             commands::list_capture_windows,
             commands::save_capture_region,
             commands::save_capture_window,
+            commands::preview_capture_color,
             commands::pick_capture_color,
             commands::close_capture_tool,
             commands::get_screenshot_directory,

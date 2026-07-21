@@ -278,6 +278,18 @@ pub fn save_capture_window(
 }
 
 #[tauri::command]
+pub fn preview_capture_color(state: State<'_, AppState>, x: u32, y: u32) -> Result<String, String> {
+    let image = state
+        .capture_image
+        .lock()
+        .map_err(|error| error.to_string())?;
+    let image = image
+        .as_ref()
+        .ok_or_else(|| "No hay una captura activa".to_string())?;
+    screen_capture::color_at(image, x, y)
+}
+
+#[tauri::command]
 pub fn pick_capture_color(
     app: AppHandle,
     state: State<'_, AppState>,
@@ -287,14 +299,16 @@ pub fn pick_capture_color(
     let image = state
         .capture_image
         .lock()
-        .map_err(|error| error.to_string())?
-        .clone()
+        .map_err(|error| error.to_string())?;
+    let image = image
+        .as_ref()
         .ok_or_else(|| "No hay una captura activa".to_string())?;
     let color = screen_capture::color_at(&image, x, y)?;
     Clipboard::new()
         .map_err(|error| error.to_string())?
         .set_text(&color)
         .map_err(|error| error.to_string())?;
+    state.db.create_text_item(&color)?;
     app.emit(CLIPBOARD_CHANGED_EVENT, ())
         .map_err(|error| error.to_string())?;
     Ok(color)

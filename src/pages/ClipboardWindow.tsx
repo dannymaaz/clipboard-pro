@@ -208,7 +208,7 @@ export function ClipboardWindow() {
         />
 
         {showSettings ? (
-          <section className="custom-scrollbar h-[365px] overflow-y-auto bg-white px-4 py-3 text-slate-900 dark:bg-[#020617] dark:text-white">
+          <section className="settings-surface custom-scrollbar h-[365px] overflow-y-auto px-4 py-3">
             <div className="mb-4 flex items-center justify-between">
               <div>
                 <h2 className="text-sm font-semibold">Preferencias</h2>
@@ -220,13 +220,13 @@ export function ClipboardWindow() {
             </div>
 
             <div className="space-y-3">
-              <label className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs dark:border-slate-800 dark:bg-slate-900/70">
+              <label className="settings-card flex items-center justify-between gap-3 rounded-lg p-3 text-xs">
                 <span>
                   <span className="block font-medium">Limite del historial</span>
                   <span className="mt-0.5 block text-[11px] text-slate-500 dark:text-slate-400">Elimina automaticamente solo elementos no protegidos.</span>
                 </span>
                 <select
-                  className="h-8 rounded-md border border-slate-200 bg-white px-2 text-slate-900 outline-none dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                  className="settings-select h-8 rounded-md px-2 outline-none"
                   value={store.settings?.historyLimit ?? 50}
                   onChange={(event) => void store.updateHistoryLimit(Number(event.target.value) as AppSettings["historyLimit"])}
                 >
@@ -237,32 +237,32 @@ export function ClipboardWindow() {
                 </select>
               </label>
 
-              <label className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs dark:border-slate-800 dark:bg-slate-900/70">
+              <label className="settings-card flex items-center justify-between gap-3 rounded-lg p-3 text-xs">
                 <span>
                   <span className="block font-medium">Iniciar con el sistema</span>
                   <span className="mt-0.5 block text-[11px] text-slate-500 dark:text-slate-400">Mantiene el monitor activo desde el arranque.</span>
                 </span>
                 <input
                   type="checkbox"
-                  className="size-4 accent-blue-600"
+                  className="accent-checkbox size-4"
                   checked={store.settings?.autoStart ?? false}
                   onChange={(event) => void store.updateAutoStart(event.target.checked)}
                 />
               </label>
 
-              <label className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs dark:border-slate-800 dark:bg-slate-900/70">
+              <label className="settings-card flex items-center justify-between gap-3 rounded-lg p-3 text-xs">
                 <span>
                   <span className="block font-medium">Tema</span>
                   <span className="mt-0.5 block text-[11px] text-slate-500 dark:text-slate-400">Usa el sistema o elige una apariencia fija.</span>
                 </span>
-                <select aria-label="Tema" className="h-8 rounded-md border border-slate-200 bg-white px-2 text-slate-900 outline-none dark:border-slate-700 dark:bg-slate-950 dark:text-white" value={store.settings?.theme ?? "system"} onChange={(event) => void store.updateTheme(event.target.value as AppSettings["theme"])}>
+                <select aria-label="Tema" className="settings-select h-8 rounded-md px-2 outline-none" value={store.settings?.theme ?? "system"} onChange={(event) => void store.updateTheme(event.target.value as AppSettings["theme"])}>
                   <option value="system">Sistema</option>
                   <option value="light">Claro</option>
                   <option value="dark">Oscuro</option>
                 </select>
               </label>
 
-              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs dark:border-slate-800 dark:bg-slate-900/70">
+              <div className="settings-card rounded-lg p-3 text-xs">
                 <span className="block font-medium">Color de acento</span>
                 <div className="mt-2 flex gap-2" role="group" aria-label="Color de acento">
                   {accentOptions.map((accent) => (
@@ -271,12 +271,12 @@ export function ClipboardWindow() {
                 </div>
               </div>
 
-              <label className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs dark:border-slate-800 dark:bg-slate-900/70">
+              <label className="settings-card flex items-center justify-between gap-3 rounded-lg p-3 text-xs">
                 <span>
                   <span className="block font-medium">Capturar portapapeles</span>
                   <span className="mt-0.5 block text-[11px] text-slate-500 dark:text-slate-400">Pausa el monitor sin borrar tu historial.</span>
                 </span>
-                <input type="checkbox" className="size-4 accent-blue-600" checked={store.settings?.captureEnabled ?? true} onChange={(event) => void store.updateCaptureEnabled(event.target.checked)} />
+                <input type="checkbox" className="accent-checkbox size-4" checked={store.settings?.captureEnabled ?? true} onChange={(event) => void store.updateCaptureEnabled(event.target.checked)} />
               </label>
 
               <ShortcutRecorder
