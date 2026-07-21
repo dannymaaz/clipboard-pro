@@ -69,6 +69,8 @@ let mockCollections: Collection[] = [
 let mockSettings: AppSettings = {
   historyLimit: 50,
   shortcut: "Ctrl+Alt+V",
+  screenshotShortcut: "Ctrl+Alt+S",
+  colorPickerShortcut: "Ctrl+Alt+C",
   theme: "system",
   accent: "blue",
   captureEnabled: true,
@@ -76,6 +78,18 @@ let mockSettings: AppSettings = {
 };
 
 export type DesktopPlatform = "windows" | "macos" | "linux" | "unknown";
+
+export interface CapturePreview {
+  dataUrl: string;
+  width: number;
+  height: number;
+}
+
+export interface CaptureWindow {
+  id: number;
+  title: string;
+  appName: string;
+}
 
 const mockService = {
   listItems: async (offset = 0, limit = 100) => mockItems.slice(offset, offset + limit),
@@ -162,7 +176,9 @@ const mockService = {
   updateAccent: async (accent: AppSettings["accent"]) => updateMockSettings({ accent }),
   updateCaptureEnabled: async (captureEnabled: boolean) => updateMockSettings({ captureEnabled }),
   updateShortcut: async (shortcut: string) => updateMockSettings({ shortcut }),
-  takeScreenshot: async () => mockService.createTextItem("Captura de pantalla de ejemplo"),
+  updateScreenshotShortcut: async (screenshotShortcut: string) => updateMockSettings({ screenshotShortcut }),
+  updateColorPickerShortcut: async (colorPickerShortcut: string) => updateMockSettings({ colorPickerShortcut }),
+  openCaptureTool: async () => undefined,
   getScreenshotDirectory: async () => "Imágenes/Clipboard Pro Screenshots",
   getAppVersion: async () => "0.2.0"
 };
@@ -226,7 +242,19 @@ export const clipboardService = {
       : mockService.updateCaptureEnabled(captureEnabled),
   updateShortcut: (shortcut: string) =>
     isTauri ? invoke<AppSettings>("update_shortcut", { shortcut }) : mockService.updateShortcut(shortcut),
-  takeScreenshot: () => (isTauri ? invoke<ClipboardItem>("take_screenshot") : mockService.takeScreenshot()),
+  updateScreenshotShortcut: (shortcut: string) =>
+    isTauri ? invoke<AppSettings>("update_screenshot_shortcut", { shortcut }) : mockService.updateScreenshotShortcut(shortcut),
+  updateColorPickerShortcut: (shortcut: string) =>
+    isTauri ? invoke<AppSettings>("update_color_picker_shortcut", { shortcut }) : mockService.updateColorPickerShortcut(shortcut),
+  openCaptureTool: (tool: "capture" | "color") =>
+    isTauri ? invoke<void>("open_capture_tool", { tool }) : mockService.openCaptureTool(),
+  getCapturePreview: () => invoke<CapturePreview>("get_capture_preview"),
+  listCaptureWindows: () => invoke<CaptureWindow[]>("list_capture_windows"),
+  saveCaptureRegion: (x: number, y: number, width: number, height: number) =>
+    invoke<ClipboardItem>("save_capture_region", { x, y, width, height }),
+  saveCaptureWindow: (id: number) => invoke<ClipboardItem>("save_capture_window", { id }),
+  pickCaptureColor: (x: number, y: number) => invoke<string>("pick_capture_color", { x, y }),
+  closeCaptureTool: () => invoke<void>("close_capture_tool"),
   getScreenshotDirectory: () => (isTauri ? invoke<string>("get_screenshot_directory") : mockService.getScreenshotDirectory()),
   getAppVersion: () => (isTauri ? invoke<string>("get_app_version") : mockService.getAppVersion()),
   hideWindow: () => (isTauri ? invoke<void>("hide_window") : Promise.resolve()),

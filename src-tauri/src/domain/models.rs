@@ -66,6 +66,8 @@ pub struct Collection {
 pub struct AppSettings {
     pub history_limit: i64,
     pub shortcut: String,
+    pub screenshot_shortcut: String,
+    pub color_picker_shortcut: String,
     pub theme: String,
     pub accent: String,
     pub auto_start: bool,

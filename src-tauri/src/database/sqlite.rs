@@ -322,6 +322,16 @@ impl Database {
         Ok(AppSettings {
             history_limit: self.get_setting_i64_locked(&conn, "history_limit", 50)?,
             shortcut: self.get_setting_locked(&conn, "shortcut", "Ctrl+Alt+V")?,
+            screenshot_shortcut: self.get_setting_locked(
+                &conn,
+                "screenshot_shortcut",
+                "Ctrl+Alt+S",
+            )?,
+            color_picker_shortcut: self.get_setting_locked(
+                &conn,
+                "color_picker_shortcut",
+                "Ctrl+Alt+C",
+            )?,
             theme: self.get_setting_locked(&conn, "theme", "system")?,
             accent: self.get_setting_locked(&conn, "accent", "blue")?,
             auto_start: self.get_setting_bool_locked(&conn, "auto_start", false)?,
@@ -373,6 +383,20 @@ impl Database {
             return Err("Shortcut must not be empty".into());
         }
         self.update_setting("shortcut", shortcut)
+    }
+
+    pub fn update_screenshot_shortcut(&self, shortcut: &str) -> Result<AppSettings, String> {
+        if shortcut.trim().is_empty() || shortcut.len() > 80 {
+            return Err("Shortcut must not be empty".into());
+        }
+        self.update_setting("screenshot_shortcut", shortcut)
+    }
+
+    pub fn update_color_picker_shortcut(&self, shortcut: &str) -> Result<AppSettings, String> {
+        if shortcut.trim().is_empty() || shortcut.len() > 80 {
+            return Err("Shortcut must not be empty".into());
+        }
+        self.update_setting("color_picker_shortcut", shortcut)
     }
 
     pub fn update_capture_enabled(&self, capture_enabled: bool) -> Result<AppSettings, String> {
@@ -580,6 +604,11 @@ fn migrate(conn: &Connection) -> Result<(), String> {
     .map_err(|error| error.to_string())?;
     conn.execute(
         "INSERT OR IGNORE INTO settings(key, value) VALUES ('accent', 'blue'), ('capture_enabled', 'true')",
+        [],
+    )
+    .map_err(|error| error.to_string())?;
+    conn.execute(
+        "INSERT OR IGNORE INTO settings(key, value) VALUES ('screenshot_shortcut', 'Ctrl+Alt+S'), ('color_picker_shortcut', 'Ctrl+Alt+C')",
         [],
     )
     .map_err(|error| error.to_string())?;

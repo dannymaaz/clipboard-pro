@@ -28,6 +28,8 @@ export interface Collection {
 export interface AppSettings {
   historyLimit: 50 | 100 | 250 | 500;
   shortcut: string;
+  screenshotShortcut: string;
+  colorPickerShortcut: string;
   theme: "system" | "light" | "dark";
   accent: "blue" | "indigo" | "violet" | "fuchsia" | "rose" | "red" | "orange" | "amber" | "green" | "emerald" | "teal" | "cyan";
   captureEnabled: boolean;

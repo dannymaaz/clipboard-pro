@@ -3,7 +3,7 @@ use crate::domain::models::{
 };
 use crate::infrastructure::clipboard_monitor::CLIPBOARD_CHANGED_EVENT;
 use crate::infrastructure::screen_capture;
-use crate::{AppState, LifecycleState};
+use crate::{show_capture_tool, AppState, LifecycleState};
 use arboard::{Clipboard, ImageData};
 use base64::{engine::general_purpose, Engine as _};
 use enigo::{Direction, Enigo, Key, Keyboard, Settings};
@@ -209,6 +209,110 @@ pub fn take_screenshot(
 }
 
 #[tauri::command]
+pub fn open_capture_tool(app: AppHandle, tool: String) -> Result<(), String> {
+    match tool.as_str() {
+        "capture" | "color" => show_capture_tool(&app, &tool),
+        _ => Err("Herramienta no vÃ¡lida".into()),
+    }
+}
+
+#[tauri::command]
+pub fn get_capture_preview(
+    state: State<'_, AppState>,
+) -> Result<screen_capture::CapturePreview, String> {
+    let image = state
+        .capture_image
+        .lock()
+        .map_err(|error| error.to_string())?
+        .clone()
+        .ok_or_else(|| "No hay una captura activa".to_string())?;
+    screen_capture::preview(&image)
+}
+
+#[tauri::command]
+pub fn list_capture_windows() -> Result<Vec<screen_capture::CaptureWindow>, String> {
+    screen_capture::list_windows()
+}
+
+#[tauri::command]
+pub fn save_capture_region(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    x: u32,
+    y: u32,
+    width: u32,
+    height: u32,
+) -> Result<ClipboardItem, String> {
+    let image = state
+        .capture_image
+        .lock()
+        .map_err(|error| error.to_string())?
+        .clone()
+        .ok_or_else(|| "No hay una captura activa".to_string())?;
+    let item = screen_capture::persist_capture(
+        &app,
+        &state.db,
+        &state.skipped_capture_image,
+        screen_capture::crop(&image, x, y, width, height)?,
+    )?;
+    app.emit(CLIPBOARD_CHANGED_EVENT, ())
+        .map_err(|error| error.to_string())?;
+    Ok(item)
+}
+
+#[tauri::command]
+pub fn save_capture_window(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    id: u32,
+) -> Result<ClipboardItem, String> {
+    let item = screen_capture::persist_capture(
+        &app,
+        &state.db,
+        &state.skipped_capture_image,
+        screen_capture::capture_window(id)?,
+    )?;
+    app.emit(CLIPBOARD_CHANGED_EVENT, ())
+        .map_err(|error| error.to_string())?;
+    Ok(item)
+}
+
+#[tauri::command]
+pub fn pick_capture_color(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    x: u32,
+    y: u32,
+) -> Result<String, String> {
+    let image = state
+        .capture_image
+        .lock()
+        .map_err(|error| error.to_string())?
+        .clone()
+        .ok_or_else(|| "No hay una captura activa".to_string())?;
+    let color = screen_capture::color_at(&image, x, y)?;
+    Clipboard::new()
+        .map_err(|error| error.to_string())?
+        .set_text(&color)
+        .map_err(|error| error.to_string())?;
+    app.emit(CLIPBOARD_CHANGED_EVENT, ())
+        .map_err(|error| error.to_string())?;
+    Ok(color)
+}
+
+#[tauri::command]
+pub fn close_capture_tool(app: AppHandle, state: State<'_, AppState>) -> Result<(), String> {
+    *state
+        .capture_image
+        .lock()
+        .map_err(|error| error.to_string())? = None;
+    if let Some(window) = app.get_webview_window("capture") {
+        window.close().map_err(|error| error.to_string())?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
 pub fn get_screenshot_directory(app: AppHandle) -> Result<String, String> {
     Ok(screen_capture::screenshot_directory(&app)?
         .display()
@@ -348,6 +452,63 @@ pub fn update_shortcut(
 
     *state.shortcut.write().map_err(|error| error.to_string())? = next.clone();
     state.db.update_shortcut(&next.to_string())
+}
+
+#[tauri::command]
+pub fn update_screenshot_shortcut(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    shortcut: String,
+) -> Result<AppSettings, String> {
+    update_tool_shortcut(
+        &app,
+        &state,
+        shortcut,
+        &state.screenshot_shortcut,
+        |db, value| db.update_screenshot_shortcut(value),
+    )
+}
+
+#[tauri::command]
+pub fn update_color_picker_shortcut(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    shortcut: String,
+) -> Result<AppSettings, String> {
+    update_tool_shortcut(
+        &app,
+        &state,
+        shortcut,
+        &state.color_picker_shortcut,
+        |db, value| db.update_color_picker_shortcut(value),
+    )
+}
+
+fn update_tool_shortcut<F>(
+    app: &AppHandle,
+    state: &AppState,
+    shortcut: String,
+    slot: &std::sync::Arc<std::sync::RwLock<Shortcut>>,
+    save: F,
+) -> Result<AppSettings, String>
+where
+    F: FnOnce(&crate::database::sqlite::Database, &str) -> Result<AppSettings, String>,
+{
+    let next =
+        Shortcut::from_str(&shortcut).map_err(|error| format!("Atajo invÃ¡lido: {error}"))?;
+    let current = slot.read().map_err(|error| error.to_string())?.clone();
+    if current == next {
+        return save(&state.db, &next.to_string());
+    }
+    app.global_shortcut()
+        .unregister(current.clone())
+        .map_err(|error| error.to_string())?;
+    if let Err(error) = app.global_shortcut().register(next.clone()) {
+        let _ = app.global_shortcut().register(current);
+        return Err(format!("No se pudo registrar el atajo: {error}"));
+    }
+    *slot.write().map_err(|error| error.to_string())? = next.clone();
+    save(&state.db, &next.to_string())
 }
 
 fn paste_hotkey() -> Result<(), String> {
