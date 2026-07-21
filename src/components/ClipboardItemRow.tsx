@@ -38,6 +38,7 @@ export function ClipboardItemRow({
   const meta = itemKindMeta[item.kind];
   const title = getItemTitle(item);
   const subtitle = getItemSubtitle(item);
+  const colorValue = item.kind === "text" && /^#[0-9a-f]{6}$/i.test(item.content.trim()) ? item.content.trim() : null;
 
   useEffect(() => {
     const closeMenu = (event: globalThis.MouseEvent) => {
@@ -90,6 +91,8 @@ export function ClipboardItemRow({
         >
           {item.kind === "image" && item.thumbnail ? (
             <img src={item.thumbnail} alt="" className="size-8 rounded-md object-cover" />
+          ) : colorValue ? (
+            <span className="size-8 rounded-md border border-white/40 shadow-inner" style={{ backgroundColor: colorValue }} title={colorValue} />
           ) : (
             <meta.Icon size={16} aria-hidden />
           )}

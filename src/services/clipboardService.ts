@@ -253,6 +253,7 @@ export const clipboardService = {
   saveCaptureRegion: (x: number, y: number, width: number, height: number) =>
     invoke<ClipboardItem>("save_capture_region", { x, y, width, height }),
   saveCaptureWindow: (id: number) => invoke<ClipboardItem>("save_capture_window", { id }),
+  previewCaptureColor: (x: number, y: number) => invoke<string>("preview_capture_color", { x, y }),
   pickCaptureColor: (x: number, y: number) => invoke<string>("pick_capture_color", { x, y }),
   closeCaptureTool: () => invoke<void>("close_capture_tool"),
   getScreenshotDirectory: () => (isTauri ? invoke<string>("get_screenshot_directory") : mockService.getScreenshotDirectory()),
