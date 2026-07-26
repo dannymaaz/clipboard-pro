@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 #[serde(rename_all = "camelCase")]
 pub enum ClipboardKind {
     Text,
+    Color,
     Url,
     Image,
     Document,
@@ -13,6 +14,7 @@ impl ClipboardKind {
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Text => "text",
+            Self::Color => "color",
             Self::Url => "url",
             Self::Image => "image",
             Self::Document => "document",
@@ -26,6 +28,7 @@ impl TryFrom<&str> for ClipboardKind {
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         match value {
             "text" => Ok(Self::Text),
+            "color" => Ok(Self::Color),
             "url" => Ok(Self::Url),
             "image" => Ok(Self::Image),
             "document" => Ok(Self::Document),

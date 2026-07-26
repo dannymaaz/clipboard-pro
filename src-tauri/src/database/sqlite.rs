@@ -186,7 +186,7 @@ impl Database {
         let kind = detect_kind(content);
         conn.execute(
             "UPDATE clipboard_items SET content = ?1, preview = ?2, kind = ?3, updated_at = ?4
-             WHERE id = ?5 AND kind IN ('text', 'url')",
+             WHERE id = ?5 AND kind IN ('text', 'color', 'url')",
             params![content, make_preview(content), kind.as_str(), now(), id],
         )
         .map_err(|error| error.to_string())?;
@@ -568,6 +568,13 @@ fn map_raw_item(row: &rusqlite::Row<'_>) -> rusqlite::Result<RawItem> {
 fn migrate(conn: &Connection) -> Result<(), String> {
     let _ = conn.execute("ALTER TABLE clipboard_items ADD COLUMN thumbnail TEXT", []);
     conn.execute(
+        "UPDATE clipboard_items SET kind = 'color'
+         WHERE kind = 'text'
+           AND trim(content) GLOB '#[0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f]'",
+        [],
+    )
+    .map_err(|error| error.to_string())?;
+    conn.execute(
         "DELETE FROM collection_items
          WHERE item_id NOT IN (SELECT id FROM clipboard_items)
             OR collection_id NOT IN (SELECT id FROM collections)",
@@ -687,6 +694,9 @@ fn make_preview(content: &str) -> String {
 fn detect_kind(content: &str) -> ClipboardKind {
     let trimmed = content.trim();
     let lower = trimmed.to_ascii_lowercase();
+    if is_hex_color(trimmed) {
+        return ClipboardKind::Color;
+    }
     if lower.starts_with("http://") || lower.starts_with("https://") {
         return ClipboardKind::Url;
     }
@@ -701,4 +711,10 @@ fn detect_kind(content: &str) -> ClipboardKind {
         return ClipboardKind::Document;
     }
     ClipboardKind::Text
+}
+
+fn is_hex_color(value: &str) -> bool {
+    value.len() == 7
+        && value.starts_with('#')
+        && value.as_bytes()[1..].iter().all(u8::is_ascii_hexdigit)
 }

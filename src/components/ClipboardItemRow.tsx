@@ -38,7 +38,7 @@ export function ClipboardItemRow({
   const meta = itemKindMeta[item.kind];
   const title = getItemTitle(item);
   const subtitle = getItemSubtitle(item);
-  const colorValue = item.kind === "text" && /^#[0-9a-f]{6}$/i.test(item.content.trim()) ? item.content.trim() : null;
+  const colorValue = item.kind === "color" ? item.content.trim() : null;
 
   useEffect(() => {
     const closeMenu = (event: globalThis.MouseEvent) => {

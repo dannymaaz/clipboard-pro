@@ -1,4 +1,4 @@
-export type ClipboardKind = "text" | "url" | "image" | "document";
+export type ClipboardKind = "text" | "color" | "url" | "image" | "document";
 
 export type ClipboardView = "history" | "favorites" | "collections";
 
