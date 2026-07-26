@@ -4,13 +4,16 @@ import { clipboardService, type CapturePreview, type CaptureWindow } from "../se
 
 type CaptureMode = "area" | "screen" | "window";
 type Point = { x: number; y: number };
-type ColorSample = Point & { value: string };
+type CursorPosition = { x: number; y: number };
+type ColorRequest = { point: Point; cursor: CursorPosition };
+type ColorSample = { point: Point; value: string };
 
 export function CaptureTool({ tool }: { tool: "capture" | "color" }) {
   const imageRef = useRef<HTMLImageElement>(null);
   const captureLock = useRef(false);
   const colorRequestInFlight = useRef(false);
-  const lastColorSampleAt = useRef(0);
+  const pendingColorRequest = useRef<ColorRequest | null>(null);
+  const latestColorRequest = useRef<ColorRequest | null>(null);
   const [preview, setPreview] = useState<CapturePreview | null>(null);
   const [mode, setMode] = useState<CaptureMode>(tool === "color" ? "area" : "area");
   const [start, setStart] = useState<Point | null>(null);
@@ -19,6 +22,7 @@ export function CaptureTool({ tool }: { tool: "capture" | "color" }) {
   const [isSaving, setIsSaving] = useState(false);
   const [isCaptured, setIsCaptured] = useState(false);
   const [colorSample, setColorSample] = useState<ColorSample | null>(null);
+  const [cursorPosition, setCursorPosition] = useState<CursorPosition | null>(null);
   const [isColorCopied, setIsColorCopied] = useState(false);
   const [message, setMessage] = useState("Preparando captura…");
 
@@ -94,27 +98,44 @@ export function CaptureTool({ tool }: { tool: "capture" | "color" }) {
     }
   };
 
+  const sampleLatestColor = () => {
+    const request = pendingColorRequest.current;
+    if (!request || colorRequestInFlight.current || isColorCopied) return;
+    pendingColorRequest.current = null;
+    colorRequestInFlight.current = true;
+    void clipboardService.previewCaptureColor(request.point.x, request.point.y)
+      .then((value) => {
+        const latest = latestColorRequest.current;
+        if (latest?.point.x === request.point.x && latest.point.y === request.point.y) {
+          setColorSample({ point: request.point, value });
+        }
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        colorRequestInFlight.current = false;
+        sampleLatestColor();
+      });
+  };
+
   const updateColorSample = (event: React.PointerEvent<HTMLImageElement>) => {
     const point = mapPoint(event);
-    if (!point || colorRequestInFlight.current || isColorCopied || Date.now() - lastColorSampleAt.current < 40) return;
-    const x = event.clientX;
-    const y = event.clientY;
-    lastColorSampleAt.current = Date.now();
-    colorRequestInFlight.current = true;
-    void clipboardService.previewCaptureColor(point.x, point.y)
-      .then((value) => setColorSample({ value, x, y }))
-      .catch(() => undefined)
-      .finally(() => { colorRequestInFlight.current = false; });
+    if (!point || isColorCopied) return;
+    const request = { point, cursor: { x: event.clientX, y: event.clientY } };
+    latestColorRequest.current = request;
+    pendingColorRequest.current = request;
+    setCursorPosition(request.cursor);
+    setColorSample(null);
+    sampleLatestColor();
   };
 
   const pickColor = (event: React.PointerEvent<HTMLImageElement>) => {
     const point = mapPoint(event);
     if (!point || captureLock.current || isColorCopied) return;
-    const x = event.clientX;
-    const y = event.clientY;
+    const cursor = { x: event.clientX, y: event.clientY };
     captureLock.current = true;
     void clipboardService.pickCaptureColor(point.x, point.y).then((value) => {
-      setColorSample({ value, x, y });
+      setCursorPosition(cursor);
+      setColorSample({ point, value });
       setIsColorCopied(true);
       setMessage(`${value} copiado al portapapeles y guardado en el historial.`);
       window.setTimeout(() => void close(), 1000);
@@ -188,7 +209,7 @@ export function CaptureTool({ tool }: { tool: "capture" | "color" }) {
           const point = mapPoint(event);
           if (point) setEnd(point);
         }
-      }} onPointerLeave={() => { if (tool === "color") setColorSample(null); }} /> : null}
+      }} onPointerLeave={() => { if (tool === "color") { setColorSample(null); setCursorPosition(null); } }} /> : null}
 
       {displayedSelection && displayedEnd ? <div className="pointer-events-none absolute border-2 border-cyan-300 bg-cyan-300/10" style={{ left: displayedSelection.left, top: displayedSelection.top, width: Math.max(1, displayedEnd.left - displayedSelection.left), height: Math.max(1, displayedEnd.top - displayedSelection.top) }} /> : null}
 
@@ -202,11 +223,11 @@ export function CaptureTool({ tool }: { tool: "capture" | "color" }) {
         </div>
       </div> : null}
 
-      {tool === "color" && colorSample ? <div className="pointer-events-none absolute z-30 flex items-center gap-2" style={{ left: colorSample.x + 18, top: colorSample.y + 18 }}>
-        <span className="grid size-9 place-items-center rounded-full border-2 border-white bg-slate-950 text-white shadow-xl"><Pipette size={18} /></span>
+      {tool === "color" && cursorPosition ? <div className="pointer-events-none absolute z-30 flex items-center gap-2" style={{ left: cursorPosition.x + 18, top: cursorPosition.y + 18 }}>
+        <span className="relative grid size-9 place-items-center rounded-full border-2 border-white bg-slate-950 text-white shadow-xl"><Pipette size={18} /><span className="absolute size-1 rounded-full bg-cyan-300" /></span>
         <span className="flex items-center gap-2 rounded-lg border border-white/30 bg-slate-950/95 px-2 py-1.5 text-xs font-semibold shadow-xl">
-          <span className="size-5 rounded border border-white/40" style={{ backgroundColor: colorSample.value }} />
-          {colorSample.value}
+          <span className="size-5 rounded border border-white/40" style={{ backgroundColor: colorSample?.value ?? "transparent" }} />
+          {colorSample?.value ?? "Leyendo…"}
         </span>
       </div> : null}
 
