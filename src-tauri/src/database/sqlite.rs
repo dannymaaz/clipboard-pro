@@ -566,7 +566,25 @@ fn map_raw_item(row: &rusqlite::Row<'_>) -> rusqlite::Result<RawItem> {
 }
 
 fn migrate(conn: &Connection) -> Result<(), String> {
+    // These data migrations can require reading every saved clipboard image.
+    // Running them during every startup makes a large history look like the
+    // application never opened, so record their successful completion.
+    let completed = conn
+        .query_row(
+            "SELECT value FROM settings WHERE key = 'data_migration_v2_complete'",
+            [],
+            |row| row.get::<_, String>(0),
+        )
+        .optional()
+        .map_err(|error| error.to_string())?
+        .as_deref()
+        == Some("true");
+
     let _ = conn.execute("ALTER TABLE clipboard_items ADD COLUMN thumbnail TEXT", []);
+    ensure_color_kind(conn)?;
+    if completed {
+        return Ok(());
+    }
     conn.execute(
         "UPDATE clipboard_items SET kind = 'color'
          WHERE kind = 'text'
@@ -584,6 +602,7 @@ fn migrate(conn: &Connection) -> Result<(), String> {
     conn.execute_batch(
         "DROP TRIGGER IF EXISTS clipboard_items_ai;
          DROP TRIGGER IF EXISTS clipboard_items_au;
+         DROP TRIGGER IF EXISTS clipboard_items_ad;
          CREATE TRIGGER clipboard_items_ai AFTER INSERT ON clipboard_items BEGIN
            INSERT INTO item_search(item_id, title, content, preview)
            VALUES (new.id, coalesce(new.title, ''), CASE WHEN new.kind = 'image' THEN '' ELSE new.content END, new.preview);
@@ -592,6 +611,9 @@ fn migrate(conn: &Connection) -> Result<(), String> {
            UPDATE item_search
            SET title = coalesce(new.title, ''), content = CASE WHEN new.kind = 'image' THEN '' ELSE new.content END, preview = new.preview
            WHERE item_id = new.id;
+         END;
+         CREATE TRIGGER clipboard_items_ad AFTER DELETE ON clipboard_items BEGIN
+           DELETE FROM item_search WHERE item_id = old.id;
          END;",
     )
     .map_err(|error| error.to_string())?;
@@ -619,7 +641,64 @@ fn migrate(conn: &Connection) -> Result<(), String> {
         [],
     )
     .map_err(|error| error.to_string())?;
+    conn.execute(
+        "INSERT INTO settings(key, value) VALUES ('data_migration_v2_complete', 'true')
+         ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+        [],
+    )
+    .map_err(|error| error.to_string())?;
     Ok(())
+}
+
+fn ensure_color_kind(conn: &Connection) -> Result<(), String> {
+    let table_sql: Option<String> = conn
+        .query_row(
+            "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'clipboard_items'",
+            [],
+            |row| row.get(0),
+        )
+        .optional()
+        .map_err(|error| error.to_string())?;
+    if table_sql
+        .as_deref()
+        .is_some_and(|sql| sql.contains("'color'"))
+    {
+        return Ok(());
+    }
+
+    conn.execute_batch("PRAGMA foreign_keys = OFF; BEGIN IMMEDIATE;")
+        .map_err(|error| error.to_string())?;
+    let result = conn.execute_batch(
+        "CREATE TABLE clipboard_items_repaired (
+           id TEXT PRIMARY KEY,
+           title TEXT,
+           content TEXT NOT NULL,
+           preview TEXT NOT NULL,
+           thumbnail TEXT,
+           kind TEXT NOT NULL CHECK (kind IN ('text', 'url', 'image', 'document', 'color')),
+           is_pinned INTEGER NOT NULL DEFAULT 0,
+           is_favorite INTEGER NOT NULL DEFAULT 0,
+           created_at TEXT NOT NULL,
+           updated_at TEXT NOT NULL,
+           last_used_at TEXT
+         );
+         INSERT INTO clipboard_items_repaired
+           (id, title, content, preview, thumbnail, kind, is_pinned, is_favorite, created_at, updated_at, last_used_at)
+         SELECT id, title, content, preview, thumbnail, kind, is_pinned, is_favorite, created_at, updated_at, last_used_at
+         FROM clipboard_items;
+         DROP TABLE clipboard_items;
+         ALTER TABLE clipboard_items_repaired RENAME TO clipboard_items;
+         CREATE INDEX idx_clipboard_items_created_at ON clipboard_items(created_at DESC);
+         CREATE INDEX idx_clipboard_items_pinned ON clipboard_items(is_pinned, created_at DESC);
+         CREATE INDEX idx_clipboard_items_favorite ON clipboard_items(is_favorite, created_at DESC);
+         CREATE INDEX idx_clipboard_items_kind ON clipboard_items(kind);
+         COMMIT;",
+    );
+    if result.is_err() {
+        let _ = conn.execute_batch("ROLLBACK;");
+    }
+    let foreign_keys = conn.execute_batch("PRAGMA foreign_keys = ON;");
+    result.and(foreign_keys).map_err(|error| error.to_string())
 }
 
 fn migrate_legacy_images(conn: &Connection) -> Result<(), String> {

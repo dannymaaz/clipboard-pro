@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS clipboard_items (
   content TEXT NOT NULL,
   preview TEXT NOT NULL,
   thumbnail TEXT,
-  kind TEXT NOT NULL CHECK (kind IN ('text', 'url', 'image', 'document')),
+  kind TEXT NOT NULL CHECK (kind IN ('text', 'url', 'image', 'document', 'color')),
   is_pinned INTEGER NOT NULL DEFAULT 0,
   is_favorite INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL,

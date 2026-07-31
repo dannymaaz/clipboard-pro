@@ -93,9 +93,14 @@ pub fn run() {
                 .unwrap_or_else(|_| default_screenshot_shortcut());
             let color_picker_shortcut = Shortcut::from_str(&settings.color_picker_shortcut)
                 .unwrap_or_else(|_| default_color_picker_shortcut());
-            app.global_shortcut().register(shortcut)?;
-            app.global_shortcut().register(screenshot_shortcut)?;
-            app.global_shortcut().register(color_picker_shortcut)?;
+            // A shortcut may already belong to another application. That
+            // should only disable that shortcut, never prevent Clipboard Pro
+            // from opening.
+            for shortcut in [&shortcut, &screenshot_shortcut, &color_picker_shortcut] {
+                if let Err(error) = app.global_shortcut().register(shortcut.clone()) {
+                    eprintln!("Could not register global shortcut {shortcut}: {error}");
+                }
+            }
             let capture_enabled = Arc::new(AtomicBool::new(settings.capture_enabled));
             let skipped_capture_image = Arc::new(Mutex::new(None));
 

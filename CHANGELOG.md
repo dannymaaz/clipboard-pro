@@ -2,6 +2,14 @@
 
 All notable changes to Clipboard Pro will be documented in this file.
 
+## [0.2.6] - 2026-07-31
+
+### Fixed
+
+- Repaired existing clipboard databases that could reject the Color history type and make the app exit during startup.
+- Run expensive legacy image and search-index migrations only once, preventing large histories from blocking app launch.
+- Keep the app available when another program already owns one of its global shortcuts.
+
 ## [0.2.1] - 2026-07-20
 
 ### Added
