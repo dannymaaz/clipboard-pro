@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Clipboard Pro",
-  "version": "0.2.6",
+  "version": "0.2.7",
   "identifier": "com.dannymaaz.clipboardpro",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -19,6 +19,15 @@
   "bundle": {
     "active": true,
     "createUpdaterArtifacts": true,
+    "windows": {
+      "nsis": {
+        "installerIcon": "icons/icon.ico",
+        "uninstallerIcon": "icons/icon.ico",
+        "headerImage": "windows/installer/header.bmp",
+        "sidebarImage": "windows/installer/sidebar.bmp",
+        "uninstallerHeaderImage": "windows/installer/uninstaller-header.bmp"
+      }
+    },
     "category": "Productivity",
     "copyright": "Copyright Danny Maaz",
     "icon": [

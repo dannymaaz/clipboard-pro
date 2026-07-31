@@ -2,6 +2,12 @@
 
 All notable changes to Clipboard Pro will be documented in this file.
 
+## [0.2.7] - 2026-07-31
+
+### Changed
+
+- Branded the Windows `.exe` installer and uninstaller with Clipboard Pro artwork, the app icon and Danny Maaz credits.
+
 ## [0.2.6] - 2026-07-31
 
 ### Fixed
