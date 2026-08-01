@@ -193,7 +193,7 @@ fn default_screenshot_shortcut() -> Shortcut {
 }
 
 fn default_color_picker_shortcut() -> Shortcut {
-    Shortcut::new(Some(Modifiers::CONTROL | Modifiers::ALT), Code::KeyC)
+    Shortcut::new(Some(Modifiers::CONTROL | Modifiers::ALT), Code::KeyG)
 }
 
 fn show_main_window(app: &AppHandle) -> tauri::Result<()> {

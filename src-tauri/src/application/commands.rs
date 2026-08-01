@@ -456,9 +456,10 @@ pub fn update_shortcut(
         return state.db.update_shortcut(&next.to_string());
     }
 
-    app.global_shortcut()
-        .unregister(current.clone())
-        .map_err(|error| error.to_string())?;
+    // Startup may have skipped this registration because another program
+    // already owned it. In that case there is nothing to unregister, but the
+    // user must still be able to save a replacement shortcut.
+    let _ = app.global_shortcut().unregister(current.clone());
     if let Err(error) = app.global_shortcut().register(next.clone()) {
         let _ = app.global_shortcut().register(current);
         return Err(format!("No se pudo registrar el atajo: {error}"));
@@ -514,9 +515,9 @@ where
     if current == next {
         return save(&state.db, &next.to_string());
     }
-    app.global_shortcut()
-        .unregister(current.clone())
-        .map_err(|error| error.to_string())?;
+    // See update_shortcut: an unavailable startup shortcut is not registered,
+    // so unregistering it must not prevent a new setting from being saved.
+    let _ = app.global_shortcut().unregister(current.clone());
     if let Err(error) = app.global_shortcut().register(next.clone()) {
         let _ = app.global_shortcut().register(current);
         return Err(format!("No se pudo registrar el atajo: {error}"));

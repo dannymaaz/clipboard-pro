@@ -298,8 +298,8 @@ export function ClipboardWindow() {
               <ShortcutRecorder
                 label="Abrir copiador de colores"
                 platform={platform}
-                value={store.settings?.colorPickerShortcut ?? (isMac ? "Command+Alt+C" : "Ctrl+Alt+C")}
-                defaultShortcut={isMac ? "Command+Alt+C" : "Ctrl+Alt+C"}
+                value={store.settings?.colorPickerShortcut ?? (isMac ? "Command+Alt+G" : "Ctrl+Alt+G")}
+                defaultShortcut={isMac ? "Command+Alt+G" : "Ctrl+Alt+G"}
                 onSave={(shortcut) => store.updateColorPickerShortcut(shortcut)}
               />
 

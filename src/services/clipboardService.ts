@@ -70,7 +70,7 @@ let mockSettings: AppSettings = {
   historyLimit: 50,
   shortcut: "Ctrl+Alt+V",
   screenshotShortcut: "Ctrl+Alt+S",
-  colorPickerShortcut: "Ctrl+Alt+C",
+  colorPickerShortcut: "Ctrl+Alt+G",
   theme: "system",
   accent: "blue",
   captureEnabled: true,

@@ -2,6 +2,13 @@
 
 All notable changes to Clipboard Pro will be documented in this file.
 
+## [0.2.8] - 2026-07-31
+
+### Fixed
+
+- Allow shortcut changes to save even when Windows did not register the previous shortcut at startup.
+- Restored `Ctrl + Alt + V`, `Ctrl + Alt + S` and `Ctrl + Alt + G` as the standard shortcut set.
+
 ## [0.2.7] - 2026-07-31
 
 ### Changed

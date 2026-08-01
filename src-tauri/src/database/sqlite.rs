@@ -330,7 +330,7 @@ impl Database {
             color_picker_shortcut: self.get_setting_locked(
                 &conn,
                 "color_picker_shortcut",
-                "Ctrl+Alt+C",
+                "Ctrl+Alt+G",
             )?,
             theme: self.get_setting_locked(&conn, "theme", "system")?,
             accent: self.get_setting_locked(&conn, "accent", "blue")?,
@@ -582,6 +582,15 @@ fn migrate(conn: &Connection) -> Result<(), String> {
 
     let _ = conn.execute("ALTER TABLE clipboard_items ADD COLUMN thumbnail TEXT", []);
     ensure_color_kind(conn)?;
+    // Ctrl+Alt+G is the intended default for the color picker. Only replace
+    // the previous shipped default so custom user shortcuts remain untouched.
+    conn.execute(
+        "UPDATE settings SET value = 'Ctrl+Alt+G'
+         WHERE key = 'color_picker_shortcut'
+           AND value IN ('Ctrl+Alt+C', 'CTRL+ALT+KeyC', 'control+alt+KeyC')",
+        [],
+    )
+    .map_err(|error| error.to_string())?;
     if completed {
         return Ok(());
     }
@@ -637,7 +646,7 @@ fn migrate(conn: &Connection) -> Result<(), String> {
     )
     .map_err(|error| error.to_string())?;
     conn.execute(
-        "INSERT OR IGNORE INTO settings(key, value) VALUES ('screenshot_shortcut', 'Ctrl+Alt+S'), ('color_picker_shortcut', 'Ctrl+Alt+C')",
+        "INSERT OR IGNORE INTO settings(key, value) VALUES ('screenshot_shortcut', 'Ctrl+Alt+S'), ('color_picker_shortcut', 'Ctrl+Alt+G')",
         [],
     )
     .map_err(|error| error.to_string())?;
