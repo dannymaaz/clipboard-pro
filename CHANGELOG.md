@@ -2,6 +2,13 @@
 
 All notable changes to Clipboard Pro will be documented in this file.
 
+## [0.2.9] - 2026-08-01
+
+### Fixed
+
+- Aligned macOS shortcut defaults with the interface: `Command + Alt + V`, `Command + Alt + S` and `Command + Alt + G`.
+- Migrated only the former standard shortcut values, preserving custom user combinations across Windows, macOS and Linux.
+
 ## [0.2.8] - 2026-07-31
 
 ### Fixed

@@ -321,16 +321,16 @@ impl Database {
         let conn = self.conn.lock().map_err(|error| error.to_string())?;
         Ok(AppSettings {
             history_limit: self.get_setting_i64_locked(&conn, "history_limit", 50)?,
-            shortcut: self.get_setting_locked(&conn, "shortcut", "Ctrl+Alt+V")?,
+            shortcut: self.get_setting_locked(&conn, "shortcut", default_shortcut_value())?,
             screenshot_shortcut: self.get_setting_locked(
                 &conn,
                 "screenshot_shortcut",
-                "Ctrl+Alt+S",
+                default_screenshot_shortcut_value(),
             )?,
             color_picker_shortcut: self.get_setting_locked(
                 &conn,
                 "color_picker_shortcut",
-                "Ctrl+Alt+G",
+                default_color_picker_shortcut_value(),
             )?,
             theme: self.get_setting_locked(&conn, "theme", "system")?,
             accent: self.get_setting_locked(&conn, "accent", "blue")?,
@@ -582,6 +582,7 @@ fn migrate(conn: &Connection) -> Result<(), String> {
 
     let _ = conn.execute("ALTER TABLE clipboard_items ADD COLUMN thumbnail TEXT", []);
     ensure_color_kind(conn)?;
+    migrate_standard_shortcuts(conn)?;
     // Ctrl+Alt+G is the intended default for the color picker. Only replace
     // the previous shipped default so custom user shortcuts remain untouched.
     conn.execute(
@@ -657,6 +658,71 @@ fn migrate(conn: &Connection) -> Result<(), String> {
     )
     .map_err(|error| error.to_string())?;
     Ok(())
+}
+
+fn migrate_standard_shortcuts(conn: &Connection) -> Result<(), String> {
+    for (key, replacement, current_values) in [
+        (
+            "shortcut",
+            default_shortcut_value(),
+            ["Ctrl+Alt+V", "CTRL+ALT+KeyV", "control+alt+KeyV", ""],
+        ),
+        (
+            "screenshot_shortcut",
+            default_screenshot_shortcut_value(),
+            ["Ctrl+Alt+S", "CTRL+ALT+KeyS", "control+alt+KeyS", ""],
+        ),
+        (
+            "color_picker_shortcut",
+            default_color_picker_shortcut_value(),
+            ["Ctrl+Alt+C", "CTRL+ALT+KeyC", "Ctrl+Alt+G", "CTRL+ALT+KeyG"],
+        ),
+    ] {
+        conn.execute(
+            "UPDATE settings SET value = ?1
+             WHERE key = ?2 AND value IN (?3, ?4, ?5, ?6)",
+            params![
+                replacement,
+                key,
+                current_values[0],
+                current_values[1],
+                current_values[2],
+                current_values[3]
+            ],
+        )
+        .map_err(|error| error.to_string())?;
+    }
+    Ok(())
+}
+
+#[cfg(target_os = "macos")]
+fn default_shortcut_value() -> &'static str {
+    "Command+Alt+V"
+}
+
+#[cfg(not(target_os = "macos"))]
+fn default_shortcut_value() -> &'static str {
+    "Ctrl+Alt+V"
+}
+
+#[cfg(target_os = "macos")]
+fn default_screenshot_shortcut_value() -> &'static str {
+    "Command+Alt+S"
+}
+
+#[cfg(not(target_os = "macos"))]
+fn default_screenshot_shortcut_value() -> &'static str {
+    "Ctrl+Alt+S"
+}
+
+#[cfg(target_os = "macos")]
+fn default_color_picker_shortcut_value() -> &'static str {
+    "Command+Alt+G"
+}
+
+#[cfg(not(target_os = "macos"))]
+fn default_color_picker_shortcut_value() -> &'static str {
+    "Ctrl+Alt+G"
 }
 
 fn ensure_color_kind(conn: &Connection) -> Result<(), String> {

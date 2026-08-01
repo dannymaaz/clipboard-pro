@@ -19,7 +19,7 @@ use tauri::{
     AppHandle, Manager, WebviewUrl, WebviewWindowBuilder,
 };
 use tauri_plugin_autostart::ManagerExt;
-use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
+use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 
 pub struct AppState {
     pub db: Database,
@@ -185,15 +185,47 @@ pub fn run() {
 }
 
 fn default_shortcut() -> Shortcut {
-    Shortcut::new(Some(Modifiers::CONTROL | Modifiers::ALT), Code::KeyV)
+    Shortcut::from_str(default_shortcut_value()).expect("default shortcut must be valid")
 }
 
 fn default_screenshot_shortcut() -> Shortcut {
-    Shortcut::new(Some(Modifiers::CONTROL | Modifiers::ALT), Code::KeyS)
+    Shortcut::from_str(default_screenshot_shortcut_value())
+        .expect("default screenshot shortcut must be valid")
 }
 
 fn default_color_picker_shortcut() -> Shortcut {
-    Shortcut::new(Some(Modifiers::CONTROL | Modifiers::ALT), Code::KeyG)
+    Shortcut::from_str(default_color_picker_shortcut_value())
+        .expect("default color picker shortcut must be valid")
+}
+
+#[cfg(target_os = "macos")]
+fn default_shortcut_value() -> &'static str {
+    "Command+Alt+V"
+}
+
+#[cfg(not(target_os = "macos"))]
+fn default_shortcut_value() -> &'static str {
+    "Ctrl+Alt+V"
+}
+
+#[cfg(target_os = "macos")]
+fn default_screenshot_shortcut_value() -> &'static str {
+    "Command+Alt+S"
+}
+
+#[cfg(not(target_os = "macos"))]
+fn default_screenshot_shortcut_value() -> &'static str {
+    "Ctrl+Alt+S"
+}
+
+#[cfg(target_os = "macos")]
+fn default_color_picker_shortcut_value() -> &'static str {
+    "Command+Alt+G"
+}
+
+#[cfg(not(target_os = "macos"))]
+fn default_color_picker_shortcut_value() -> &'static str {
+    "Ctrl+Alt+G"
 }
 
 fn show_main_window(app: &AppHandle) -> tauri::Result<()> {
