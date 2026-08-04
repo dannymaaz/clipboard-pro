@@ -2,6 +2,19 @@
 
 All notable changes to Clipboard Pro will be documented in this file.
 
+## [0.3.0] - 2026-08-03
+
+### Added
+
+- Added an explicit storage-cleanup control that removes only unprotected clipboard history and associated screenshots older than 30 days.
+
+### Fixed
+
+- Made FTS5 searches safe for colors, URLs and other special characters.
+- Preserved the main window for reliable tray-icon and global-shortcut reopening.
+- Prevented duplicate internal shortcuts and only persist shortcuts after successful system registration.
+- Reduced history-loading database work by loading collection memberships in one query.
+
 ## [0.2.9] - 2026-08-01
 
 ### Fixed
