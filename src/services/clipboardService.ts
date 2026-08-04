@@ -91,6 +91,11 @@ export interface CaptureWindow {
   appName: string;
 }
 
+export interface CleanupSummary {
+  deletedItems: number;
+  deletedScreenshots: number;
+}
+
 const mockService = {
   listItems: async (offset = 0, limit = 100) => mockItems.slice(offset, offset + limit),
   searchItems: async (query: string) => {
@@ -257,6 +262,7 @@ export const clipboardService = {
   pickCaptureColor: (x: number, y: number) => invoke<string>("pick_capture_color", { x, y }),
   closeCaptureTool: () => invoke<void>("close_capture_tool"),
   getScreenshotDirectory: () => (isTauri ? invoke<string>("get_screenshot_directory") : mockService.getScreenshotDirectory()),
+  cleanupOldData: () => (isTauri ? invoke<CleanupSummary>("cleanup_old_data") : Promise.resolve({ deletedItems: 0, deletedScreenshots: 0 })),
   getAppVersion: () => (isTauri ? invoke<string>("get_app_version") : mockService.getAppVersion()),
   hideWindow: () => (isTauri ? invoke<void>("hide_window") : Promise.resolve()),
   minimizeWindow: () => (isTauri ? invoke<void>("minimize_window") : Promise.resolve()),

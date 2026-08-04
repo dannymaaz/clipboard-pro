@@ -85,7 +85,7 @@ pub fn capture_window(id: u32) -> Result<RgbaImage, String> {
         .map_err(|error| error.to_string())?
         .into_iter()
         .find(|window| window.id().ok() == Some(id))
-        .ok_or_else(|| "La ventana ya no estÃ¡ disponible".to_string())?;
+        .ok_or_else(|| "La ventana ya no está disponible".to_string())?;
     window.capture_image().map_err(|error| error.to_string())
 }
 
@@ -97,7 +97,7 @@ pub fn crop(
     height: u32,
 ) -> Result<RgbaImage, String> {
     if width == 0 || height == 0 || x >= image.width() || y >= image.height() {
-        return Err("Selecciona un Ã¡rea vÃ¡lida".into());
+        return Err("Selecciona un área válida".into());
     }
     let width = width.min(image.width() - x);
     let height = height.min(image.height() - y);
@@ -106,7 +106,7 @@ pub fn crop(
 
 pub fn color_at(image: &RgbaImage, x: u32, y: u32) -> Result<String, String> {
     if x >= image.width() || y >= image.height() {
-        return Err("El color seleccionado estÃ¡ fuera de la pantalla".into());
+        return Err("El color seleccionado está fuera de la pantalla".into());
     }
     let pixel = image.get_pixel(x, y).0;
     Ok(format!("#{:02X}{:02X}{:02X}", pixel[0], pixel[1], pixel[2]))

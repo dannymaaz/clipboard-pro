@@ -5,6 +5,8 @@ use base64::{engine::general_purpose, Engine as _};
 use chrono::Utc;
 use image::{DynamicImage, ImageBuffer, ImageEncoder, Rgba};
 use rusqlite::{params, Connection, OptionalExtension};
+use serde::Serialize;
+use std::collections::HashMap;
 use std::fs;
 use std::sync::{Arc, Mutex};
 use tauri::{AppHandle, Manager};
@@ -27,6 +29,13 @@ struct RawItem {
     created_at: String,
     updated_at: String,
     last_used_at: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CleanupResult {
+    pub deleted_items: usize,
+    pub screenshot_paths: Vec<String>,
 }
 
 impl Database {
@@ -69,18 +78,11 @@ impl Database {
             .collect::<Result<Vec<_>, _>>()
             .map_err(|error| error.to_string())?;
 
-        raw_items
-            .into_iter()
-            .map(|raw| self.hydrate_item(&conn, raw, false))
-            .collect()
+        self.hydrate_items(&conn, raw_items, false)
     }
 
     pub fn search_items(&self, query: &str) -> Result<Vec<ClipboardItem>, String> {
-        let sanitized = query
-            .split_whitespace()
-            .map(|part| format!("{part}*"))
-            .collect::<Vec<_>>()
-            .join(" ");
+        let sanitized = make_fts_query(query);
 
         if sanitized.trim().is_empty() {
             return self.list_items();
@@ -104,10 +106,7 @@ impl Database {
             .collect::<Result<Vec<_>, _>>()
             .map_err(|error| error.to_string())?;
 
-        raw_items
-            .into_iter()
-            .map(|raw| self.hydrate_item(&conn, raw, false))
-            .collect()
+        self.hydrate_items(&conn, raw_items, false)
     }
 
     pub fn create_text_item(&self, content: &str) -> Result<ClipboardItem, String> {
@@ -203,6 +202,49 @@ impl Database {
         conn.execute("DELETE FROM clipboard_items WHERE id = ?1", params![id])
             .map_err(|error| error.to_string())?;
         Ok(())
+    }
+
+    pub fn cleanup_old_unprotected_items(&self, cutoff: &str) -> Result<CleanupResult, String> {
+        let mut conn = self.conn.lock().map_err(|error| error.to_string())?;
+        let tx = conn.transaction().map_err(|error| error.to_string())?;
+        let mut statement = tx
+            .prepare(
+                "SELECT content FROM clipboard_items
+                 WHERE kind = 'image' AND created_at < ?1
+                   AND is_pinned = 0 AND is_favorite = 0
+                   AND NOT EXISTS (SELECT 1 FROM collection_items ci WHERE ci.item_id = clipboard_items.id)",
+            )
+            .map_err(|error| error.to_string())?;
+        let screenshot_paths = statement
+            .query_map(params![cutoff], |row| row.get::<_, String>(0))
+            .map_err(|error| error.to_string())?
+            .filter_map(|result| {
+                result.ok().and_then(|content| {
+                    serde_json::from_str::<ImageClipboardContent>(&content)
+                        .ok()
+                        .and_then(|image| image.file_path)
+                })
+            })
+            .collect::<Vec<_>>();
+        drop(statement);
+        let deleted_items = tx
+            .execute(
+                "DELETE FROM clipboard_items
+                 WHERE created_at < ?1
+                   AND is_pinned = 0 AND is_favorite = 0
+                   AND NOT EXISTS (SELECT 1 FROM collection_items ci WHERE ci.item_id = clipboard_items.id)",
+                params![cutoff],
+            )
+            .map_err(|error| error.to_string())?;
+        tx.commit().map_err(|error| error.to_string())?;
+        if deleted_items > 0 {
+            conn.execute_batch("VACUUM")
+                .map_err(|error| error.to_string())?;
+        }
+        Ok(CleanupResult {
+            deleted_items,
+            screenshot_paths,
+        })
     }
 
     pub fn toggle_pin(&self, id: &str) -> Result<ClipboardItem, String> {
@@ -456,6 +498,66 @@ impl Database {
         })
     }
 
+    fn hydrate_items(
+        &self,
+        conn: &Connection,
+        raw_items: Vec<RawItem>,
+        include_content: bool,
+    ) -> Result<Vec<ClipboardItem>, String> {
+        if raw_items.is_empty() {
+            return Ok(Vec::new());
+        }
+        let ids = raw_items
+            .iter()
+            .map(|item| item.id.as_str())
+            .collect::<Vec<_>>();
+        let placeholders = std::iter::repeat("?")
+            .take(ids.len())
+            .collect::<Vec<_>>()
+            .join(",");
+        let query = format!(
+            "SELECT item_id, collection_id FROM collection_items WHERE item_id IN ({placeholders}) ORDER BY created_at DESC"
+        );
+        let mut statement = conn.prepare(&query).map_err(|error| error.to_string())?;
+        let rows = statement
+            .query_map(rusqlite::params_from_iter(ids), |row| {
+                Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+            })
+            .map_err(|error| error.to_string())?;
+        let mut collections_by_item: HashMap<String, Vec<String>> = HashMap::new();
+        for row in rows {
+            let (item_id, collection_id) = row.map_err(|error| error.to_string())?;
+            collections_by_item
+                .entry(item_id)
+                .or_default()
+                .push(collection_id);
+        }
+        Ok(raw_items
+            .into_iter()
+            .map(|raw| {
+                let content = if include_content || !matches!(raw.kind, ClipboardKind::Image) {
+                    raw.content
+                } else {
+                    String::new()
+                };
+                ClipboardItem {
+                    collections: collections_by_item.remove(&raw.id).unwrap_or_default(),
+                    id: raw.id,
+                    title: raw.title,
+                    content,
+                    preview: raw.preview,
+                    thumbnail: raw.thumbnail,
+                    kind: raw.kind,
+                    is_pinned: raw.is_pinned,
+                    is_favorite: raw.is_favorite,
+                    created_at: raw.created_at,
+                    updated_at: raw.updated_at,
+                    last_used_at: raw.last_used_at,
+                }
+            })
+            .collect())
+    }
+
     fn fetch_collection_locked(&self, conn: &Connection, id: &str) -> Result<Collection, String> {
         conn.query_row(
             "SELECT c.id, c.name, COUNT(item.id) AS item_count, c.created_at, c.updated_at
@@ -660,6 +762,14 @@ fn migrate(conn: &Connection) -> Result<(), String> {
     Ok(())
 }
 
+fn make_fts_query(query: &str) -> String {
+    query
+        .split_whitespace()
+        .map(|part| format!("\"{}\"*", part.replace('"', "\"\"")))
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
 fn migrate_standard_shortcuts(conn: &Connection) -> Result<(), String> {
     for (key, replacement, current_values) in [
         (
@@ -834,6 +944,70 @@ fn migrate_legacy_images(conn: &Connection) -> Result<(), String> {
         .map_err(|error| error.to_string())?;
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn fts_query_escapes_special_characters() {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch(
+            "CREATE VIRTUAL TABLE item_search USING fts5(item_id UNINDEXED, title, content, preview, tokenize = 'unicode61 remove_diacritics 2');
+             INSERT INTO item_search(item_id, title, content, preview) VALUES ('1', '', '#AABBCC https://example.com C++', '');",
+        )
+        .unwrap();
+        for query in ["#AABBCC", "https://example.com", "C++", "\""] {
+            let fts = make_fts_query(query);
+            conn.prepare("SELECT item_id FROM item_search WHERE item_search MATCH ?1")
+                .unwrap()
+                .query_map(params![fts], |row| row.get::<_, String>(0))
+                .unwrap();
+        }
+    }
+
+    #[test]
+    fn cleanup_keeps_protected_old_items() {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch(include_str!("../../database/schema.sql"))
+            .unwrap();
+        let db = Database {
+            conn: Arc::new(Mutex::new(conn)),
+        };
+        let conn = db.conn.lock().unwrap();
+        for (id, pinned, favorite) in [
+            ("old", 0, 0),
+            ("pinned", 1, 0),
+            ("favorite", 0, 1),
+            ("collection", 0, 0),
+        ] {
+            conn.execute(
+                "INSERT INTO clipboard_items(id, content, preview, kind, is_pinned, is_favorite, created_at, updated_at)
+                 VALUES (?1, ?2, ?2, 'text', ?3, ?4, '2020-01-01T00:00:00Z', '2020-01-01T00:00:00Z')",
+                params![id, id, pinned, favorite],
+            )
+            .unwrap();
+        }
+        conn.execute(
+            "INSERT INTO collections(id, name, created_at, updated_at) VALUES ('collection-id', 'Keep', '2020-01-01T00:00:00Z', '2020-01-01T00:00:00Z');
+             INSERT INTO collection_items(item_id, collection_id, created_at) VALUES ('collection', 'collection-id', '2020-01-01T00:00:00Z');",
+            [],
+        )
+        .unwrap();
+        drop(conn);
+        let result = db
+            .cleanup_old_unprotected_items("2021-01-01T00:00:00Z")
+            .unwrap();
+        assert_eq!(result.deleted_items, 1);
+        let conn = db.conn.lock().unwrap();
+        assert_eq!(
+            conn.query_row("SELECT COUNT(*) FROM clipboard_items", [], |row| row
+                .get::<_, i64>(0))
+                .unwrap(),
+            3
+        );
+    }
 }
 
 fn now() -> String {
