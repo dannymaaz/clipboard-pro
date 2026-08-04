@@ -39,6 +39,8 @@ export function ClipboardWindow() {
   const [appVersion, setAppVersion] = useState("...");
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [captureMessage, setCaptureMessage] = useState<string | null>(null);
+  const [cleanupMessage, setCleanupMessage] = useState<string | null>(null);
+  const [showCleanupConfirmation, setShowCleanupConfirmation] = useState(false);
   const isMac = platform === "macos";
 
   useSystemTheme(store.settings?.theme, store.settings?.accent);
@@ -207,6 +209,13 @@ export function ClipboardWindow() {
           }}
         />
 
+        {store.error ? (
+          <div className="flex items-center justify-between gap-3 border-b border-amber-500/30 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-900 dark:text-amber-100" role="alert">
+            <span>{store.error}</span>
+            <button className="text-button h-6 px-2 text-[11px]" type="button" onClick={store.clearError}>Cerrar</button>
+          </div>
+        ) : null}
+
         {showSettings ? (
           <section className="settings-surface custom-scrollbar h-[365px] overflow-y-auto px-4 py-3">
             <div className="mb-4 flex items-center justify-between">
@@ -311,6 +320,13 @@ export function ClipboardWindow() {
                   <button className="text-button h-8 px-3 text-[11px]" type="button" onClick={() => void clipboardService.openCaptureTool("color").catch((error) => setCaptureMessage(error instanceof Error ? error.message : "No se pudo abrir el copiador de colores."))}>Copiar color</button>
                 </div>
                 {captureMessage ? <p className="mt-2 text-[11px] text-theme-muted" role="status">{captureMessage}</p> : null}
+              </div>
+
+              <div className="theme-surface rounded-xl p-3 text-xs">
+                <span className="font-semibold">Liberar almacenamiento</span>
+                <p className="mt-1 text-[11px] text-theme-muted">Elimina únicamente historial y capturas de más de 30 días que no estén en favoritos, fijados ni dentro de una colección. Tus elementos protegidos y los recientes no se tocarán.</p>
+                <button className="text-button mt-3 flex h-8 items-center gap-1 px-3 text-[11px]" type="button" onClick={() => setShowCleanupConfirmation(true)}><Trash2 size={14} /> Limpiar datos antiguos</button>
+                {cleanupMessage ? <p className="mt-2 text-[11px] text-theme-muted" role="status">{cleanupMessage}</p> : null}
               </div>
             </div>
           </section>
@@ -515,6 +531,25 @@ export function ClipboardWindow() {
                   </div>
                 </>
               ) : null}
+            </div>
+          </section>
+        ) : null}
+
+        {showCleanupConfirmation ? (
+          <section className="absolute inset-0 z-50 grid place-items-center bg-slate-950/35 p-4 backdrop-blur-[2px]">
+            <div className="w-full max-w-[330px] rounded-xl border border-slate-200 bg-white p-4 shadow-2xl dark:border-slate-700 dark:bg-slate-900">
+              <h2 className="text-sm font-semibold text-slate-900 dark:text-white">¿Limpiar datos antiguos?</h2>
+              <p className="mt-2 text-xs leading-5 text-slate-600 dark:text-slate-300">Se eliminarán los elementos de más de 30 días sin protección y sus capturas asociadas. No se eliminarán favoritos, elementos fijados, elementos en colecciones ni contenido reciente.</p>
+              <div className="mt-4 flex justify-end gap-2">
+                <button className="text-button" type="button" onClick={() => setShowCleanupConfirmation(false)}>Cancelar</button>
+                <button className="primary-button" type="button" onClick={() => void store.cleanupOldData().then((summary) => {
+                  setCleanupMessage(`Limpieza completada: ${summary.deletedItems} elementos y ${summary.deletedScreenshots} capturas eliminados.`);
+                  setShowCleanupConfirmation(false);
+                }).catch((error) => {
+                  setCleanupMessage(error instanceof Error ? error.message : "No se pudieron limpiar los datos antiguos.");
+                  setShowCleanupConfirmation(false);
+                })}>Limpiar</button>
+              </div>
             </div>
           </section>
         ) : null}

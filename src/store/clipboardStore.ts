@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { clipboardService } from "../services/clipboardService";
+import { clipboardService, type CleanupSummary } from "../services/clipboardService";
 import type { AppSettings, ClipboardItem, ClipboardView, Collection } from "../types/clipboard";
 
 interface ClipboardState {
@@ -12,6 +12,8 @@ interface ClipboardState {
   isLoading: boolean;
   isLoadingMore: boolean;
   hasMore: boolean;
+  error: string | null;
+  clearError: () => void;
   load: () => Promise<void>;
   loadMore: () => Promise<void>;
   search: (query: string) => Promise<void>;
@@ -37,6 +39,7 @@ interface ClipboardState {
   updateShortcut: (shortcut: string) => Promise<void>;
   updateScreenshotShortcut: (shortcut: string) => Promise<void>;
   updateColorPickerShortcut: (shortcut: string) => Promise<void>;
+  cleanupOldData: () => Promise<CleanupSummary>;
 }
 
 const upsertItem = (items: ClipboardItem[], nextItem: ClipboardItem) =>
@@ -54,16 +57,24 @@ export const useClipboardStore = create<ClipboardState>((set, get) => ({
   isLoading: false,
   isLoadingMore: false,
   hasMore: false,
+  error: null,
+  clearError: () => set({ error: null }),
 
   load: async () => {
-    set({ isLoading: true });
-    const query = get().query;
-    const [items, collections, settings] = await Promise.all([
-      query.trim() ? clipboardService.searchItems(query) : clipboardService.listItemsPage(0, HISTORY_PAGE_SIZE),
-      clipboardService.listCollections(),
-      clipboardService.getSettings()
-    ]);
-    set({ items, collections, settings, hasMore: !query.trim() && items.length === HISTORY_PAGE_SIZE, isLoading: false });
+    set({ isLoading: true, error: null });
+    try {
+      const query = get().query;
+      const [items, collections, settings] = await Promise.all([
+        query.trim() ? clipboardService.searchItems(query) : clipboardService.listItemsPage(0, HISTORY_PAGE_SIZE),
+        clipboardService.listCollections(),
+        clipboardService.getSettings()
+      ]);
+      set({ items, collections, settings, hasMore: !query.trim() && items.length === HISTORY_PAGE_SIZE });
+    } catch (error) {
+      set({ error: error instanceof Error ? error.message : "No se pudo cargar el historial." });
+    } finally {
+      set({ isLoading: false });
+    }
   },
 
   loadMore: async () => {
@@ -83,10 +94,14 @@ export const useClipboardStore = create<ClipboardState>((set, get) => ({
   search: async (query) => {
     const request = ++searchRequest;
     set({ query });
-    const items = query.trim()
-      ? await clipboardService.searchItems(query)
-      : await clipboardService.listItemsPage(0, HISTORY_PAGE_SIZE);
-    if (request === searchRequest) set({ items, hasMore: !query.trim() && items.length === HISTORY_PAGE_SIZE });
+    try {
+      const items = query.trim()
+        ? await clipboardService.searchItems(query)
+        : await clipboardService.listItemsPage(0, HISTORY_PAGE_SIZE);
+      if (request === searchRequest) set({ items, hasMore: !query.trim() && items.length === HISTORY_PAGE_SIZE, error: null });
+    } catch (error) {
+      if (request === searchRequest) set({ error: error instanceof Error ? error.message : "No se pudo realizar la búsqueda." });
+    }
   },
 
   setView: (activeView) => set({ activeView, selectedCollectionId: null }),
@@ -203,5 +218,11 @@ export const useClipboardStore = create<ClipboardState>((set, get) => ({
   updateColorPickerShortcut: async (shortcut) => {
     const settings = await clipboardService.updateColorPickerShortcut(shortcut);
     set({ settings });
+  },
+
+  cleanupOldData: async () => {
+    const summary = await clipboardService.cleanupOldData();
+    await get().load();
+    return summary;
   }
 }));

@@ -6,15 +6,24 @@ use crate::infrastructure::screen_capture;
 use crate::{show_capture_tool, AppState, LifecycleState};
 use arboard::{Clipboard, ImageData};
 use base64::{engine::general_purpose, Engine as _};
+use chrono::{Duration as ChronoDuration, Utc};
 use enigo::{Direction, Enigo, Key, Keyboard, Settings};
 use image::ImageReader;
 use std::borrow::Cow;
+use std::fs;
 use std::io::Cursor;
 use std::str::FromStr;
 use std::sync::atomic::Ordering;
 use std::{thread, time::Duration};
 use tauri::{AppHandle, Emitter, Manager, State};
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut};
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CleanupSummary {
+    deleted_items: usize,
+    deleted_screenshots: usize,
+}
 
 #[tauri::command]
 pub fn list_items(state: State<'_, AppState>) -> Result<Vec<ClipboardItem>, String> {
@@ -116,7 +125,7 @@ pub fn paste_item(app: AppHandle, state: State<'_, AppState>, id: String) -> Res
         .map_err(|error| error.to_string())?;
 
     if let Some(window) = app.get_webview_window("main") {
-        window.close().map_err(|error| error.to_string())?;
+        window.hide().map_err(|error| error.to_string())?;
     }
 
     thread::spawn(|| {
@@ -130,7 +139,7 @@ pub fn paste_item(app: AppHandle, state: State<'_, AppState>, id: String) -> Res
 #[tauri::command]
 pub fn hide_window(app: AppHandle) -> Result<(), String> {
     if let Some(window) = app.get_webview_window("main") {
-        window.close().map_err(|error| error.to_string())?;
+        window.hide().map_err(|error| error.to_string())?;
     }
     Ok(())
 }
@@ -212,7 +221,7 @@ pub fn take_screenshot(
 pub fn open_capture_tool(app: AppHandle, tool: String) -> Result<(), String> {
     match tool.as_str() {
         "capture" | "color" => show_capture_tool(&app, &tool),
-        _ => Err("Herramienta no vÃ¡lida".into()),
+        _ => Err("Herramienta no válida".into()),
     }
 }
 
@@ -334,6 +343,31 @@ pub fn get_screenshot_directory(app: AppHandle) -> Result<String, String> {
 }
 
 #[tauri::command]
+pub fn cleanup_old_data(
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> Result<CleanupSummary, String> {
+    const RETENTION_DAYS: i64 = 30;
+    let cutoff = (Utc::now() - ChronoDuration::days(RETENTION_DAYS)).to_rfc3339();
+    let cleanup = state.db.cleanup_old_unprotected_items(&cutoff)?;
+    let screenshot_directory = screen_capture::screenshot_directory(&app)?;
+    let deleted_screenshots = cleanup
+        .screenshot_paths
+        .iter()
+        .filter_map(|path| {
+            let path = std::path::Path::new(path);
+            path.starts_with(&screenshot_directory)
+                .then(|| fs::remove_file(path).is_ok())
+        })
+        .filter(|deleted| *deleted)
+        .count();
+    Ok(CleanupSummary {
+        deleted_items: cleanup.deleted_items,
+        deleted_screenshots,
+    })
+}
+
+#[tauri::command]
 pub fn toggle_pin(state: State<'_, AppState>, id: String) -> Result<ClipboardItem, String> {
     state.db.toggle_pin(&id)
 }
@@ -452,7 +486,13 @@ pub fn update_shortcut(
         .read()
         .map_err(|error| error.to_string())?
         .clone();
+    ensure_shortcut_is_unique(&state, &next, Some("shortcut"))?;
     if current == next {
+        if !app.global_shortcut().is_registered(next.clone()) {
+            app.global_shortcut()
+                .register(next.clone())
+                .map_err(|error| format!("No se pudo registrar el atajo: {error}"))?;
+        }
         return state.db.update_shortcut(&next.to_string());
     }
 
@@ -509,10 +549,20 @@ fn update_tool_shortcut<F>(
 where
     F: FnOnce(&crate::database::sqlite::Database, &str) -> Result<AppSettings, String>,
 {
-    let next =
-        Shortcut::from_str(&shortcut).map_err(|error| format!("Atajo invÃ¡lido: {error}"))?;
+    let next = Shortcut::from_str(&shortcut).map_err(|error| format!("Atajo inválido: {error}"))?;
     let current = slot.read().map_err(|error| error.to_string())?.clone();
+    let changing = if std::ptr::eq(slot, &state.screenshot_shortcut) {
+        Some("screenshot")
+    } else {
+        Some("color")
+    };
+    ensure_shortcut_is_unique(state, &next, changing)?;
     if current == next {
+        if !app.global_shortcut().is_registered(next.clone()) {
+            app.global_shortcut()
+                .register(next.clone())
+                .map_err(|error| format!("No se pudo registrar el atajo: {error}"))?;
+        }
         return save(&state.db, &next.to_string());
     }
     // See update_shortcut: an unavailable startup shortcut is not registered,
@@ -524,6 +574,46 @@ where
     }
     *slot.write().map_err(|error| error.to_string())? = next.clone();
     save(&state.db, &next.to_string())
+}
+
+fn ensure_shortcut_is_unique(
+    state: &AppState,
+    next: &Shortcut,
+    changing: Option<&str>,
+) -> Result<(), String> {
+    let shortcuts = [
+        (
+            "shortcut",
+            state
+                .shortcut
+                .read()
+                .map_err(|error| error.to_string())?
+                .clone(),
+        ),
+        (
+            "screenshot",
+            state
+                .screenshot_shortcut
+                .read()
+                .map_err(|error| error.to_string())?
+                .clone(),
+        ),
+        (
+            "color",
+            state
+                .color_picker_shortcut
+                .read()
+                .map_err(|error| error.to_string())?
+                .clone(),
+        ),
+    ];
+    if shortcuts
+        .iter()
+        .any(|(name, shortcut)| Some(*name) != changing && shortcut == next)
+    {
+        return Err("Ese atajo ya está asignado a otra función de Clipboard Pro.".into());
+    }
+    Ok(())
 }
 
 fn paste_hotkey() -> Result<(), String> {

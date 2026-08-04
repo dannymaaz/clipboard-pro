@@ -150,6 +150,7 @@ pub fn run() {
             commands::pick_capture_color,
             commands::close_capture_tool,
             commands::get_screenshot_directory,
+            commands::cleanup_old_data,
             commands::toggle_pin,
             commands::toggle_favorite,
             commands::list_collections,
