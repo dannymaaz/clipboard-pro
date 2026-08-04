@@ -960,10 +960,14 @@ mod tests {
         .unwrap();
         for query in ["#AABBCC", "https://example.com", "C++", "\""] {
             let fts = make_fts_query(query);
-            conn.prepare("SELECT item_id FROM item_search WHERE item_search MATCH ?1")
+            let matches = conn
+                .prepare("SELECT item_id FROM item_search WHERE item_search MATCH ?1")
                 .unwrap()
                 .query_map(params![fts], |row| row.get::<_, String>(0))
+                .unwrap()
+                .collect::<Result<Vec<_>, _>>()
                 .unwrap();
+            assert!(matches.len() <= 1);
         }
     }
 
@@ -989,10 +993,9 @@ mod tests {
             )
             .unwrap();
         }
-        conn.execute(
+        conn.execute_batch(
             "INSERT INTO collections(id, name, created_at, updated_at) VALUES ('collection-id', 'Keep', '2020-01-01T00:00:00Z', '2020-01-01T00:00:00Z');
              INSERT INTO collection_items(item_id, collection_id, created_at) VALUES ('collection', 'collection-id', '2020-01-01T00:00:00Z');",
-            [],
         )
         .unwrap();
         drop(conn);
