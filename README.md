@@ -5,11 +5,17 @@
 <h1 align="center">Clipboard Pro</h1>
 
 <p align="center">
-  Todo lo bueno del portapapeles nativo, pero con superpoderes.
+  Historial de portapapeles privado, rápido y organizado para Windows, macOS y Linux.
 </p>
 
 <p align="center">
-  Created by <strong>Danny Maaz</strong> &middot;
+  <a href="https://github.com/dannymaaz/clipboard-pro/releases">Descargar</a> &middot;
+  <a href="docs/INSTALLATION.md">Instalación</a> &middot;
+  <a href="SECURITY.md">Seguridad</a>
+</p>
+
+<p align="center">
+  Creado por <strong>Danny Maaz</strong> &middot;
   <a href="https://www.linkedin.com/in/DANNYMAAZ">LinkedIn</a> &middot;
   <a href="https://www.paypal.me/Creativegt">Support the project</a>
 </p>
@@ -21,9 +27,9 @@
   <a href="LICENSE"><img alt="MIT License" src="https://img.shields.io/badge/license-MIT-green"></a>
 </p>
 
-Clipboard Pro es una aplicacion de escritorio moderna, minimalista, ultrarrapida y multiplataforma para Windows, macOS y Linux. Mejora el portapapeles nativo con historial, busqueda instantanea, favoritos, pineados, colecciones y edicion de texto, manteniendo una experiencia discreta parecida a `Win + V`, Raycast y Spotlight.
+Clipboard Pro es un gestor de portapapeles de escritorio, local y multiplataforma para Windows, macOS y Linux. Añade historial, búsqueda instantánea, favoritos, elementos fijados, colecciones y edición de texto sin enviar el contenido a la nube ni incorporar telemetría.
 
-## Caracteristicas
+## Características
 
 - Historial local con limites configurables de `50`, `100`, `250` y `500` elementos.
 - Pineados siempre arriba, sin vista separada y protegidos de eliminacion automatica.
@@ -55,7 +61,7 @@ Clipboard Pro es una aplicacion de escritorio moderna, minimalista, ultrarrapida
   <img src="docs/screenshots/clipboard-pro-collections.png" width="420" alt="Clipboard Pro collections view" />
 </p>
 
-## Instalacion
+## Instalación
 
 Descarga por sistema:
 
@@ -166,7 +172,7 @@ Objetivos del proyecto:
 
 Consulta [docs/PERFORMANCE.md](docs/PERFORMANCE.md).
 
-## Contribucion
+## Contribución
 
 Las contribuciones son bienvenidas. Lee [CONTRIBUTING.md](CONTRIBUTING.md), [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) y [SECURITY.md](SECURITY.md) antes de abrir issues o pull requests.
 
